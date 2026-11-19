@@ -13,6 +13,7 @@ import { fr } from 'date-fns/locale';
 import { CalendarDays, DollarSign, User, Home, Tag } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { KrossbookingReservation } from '@/lib/krossbooking';
+import { reservationReference } from '@/lib/reservation-labels';
 
 interface ReservationActionsDialogProps {
   isOpen: boolean;
@@ -69,9 +70,9 @@ const ReservationActionsDialog: React.FC<ReservationActionsDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="flex items-center">
-            <Tag className="h-4 w-4 mr-2 text-gray-500" />
-            <span className="font-medium">ID Réservation:</span> {booking.id}
+          <div className="flex items-center gap-2">
+            <Tag className="h-4 w-4 shrink-0 text-gray-500" />
+            <span className="font-medium">Référence:</span> <span className="break-all">{reservationReference(booking)}</span>
           </div>
           <div className="flex items-center">
             <User className="h-4 w-4 mr-2 text-gray-500" />

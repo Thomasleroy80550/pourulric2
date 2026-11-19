@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { fetchKrossbookingReservations, KrossbookingReservation } from '@/lib/krossbooking';
 import { useOwnerReservationFeed } from '@/hooks/use-owner-reservation-feed';
+import { reservationReference } from '@/lib/reservation-labels';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, CalendarDays, DollarSign, User, Home, Tag, Filter, XCircle, Flag, MessageSquare } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfYear, endOfYear, isAfter, isBefore, subDays, addDays } from 'date-fns';
@@ -386,7 +387,7 @@ const BookingsPage: React.FC = () => {
                         <Table className="min-w-full">
                           <TableHeader>
                             <TableRow className="bg-gray-50 sticky top-0 z-10">
-                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">ID Réservation</TableHead>
+                              <TableHead className="text-xs uppercase tracking-wide text-gray-500">Référence</TableHead>
                               <TableHead className="text-xs uppercase tracking-wide text-gray-500">Client</TableHead>
                               <TableHead className="text-xs uppercase tracking-wide text-gray-500">Propriété</TableHead>
                               <TableHead className="text-xs uppercase tracking-wide text-gray-500">Canal</TableHead>
@@ -404,7 +405,7 @@ const BookingsPage: React.FC = () => {
                                 onClick={() => handleOpenDetails(booking)}
                                 className="group cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
                               >
-                                <TableCell className="font-medium text-sm">#{booking.id}</TableCell>
+                                <TableCell className="font-medium text-sm">{reservationReference(booking)}</TableCell>
                                 <TableCell className="text-sm">{booking.guest_name}</TableCell>
                                 <TableCell className="text-sm">{booking.property_name}</TableCell>
                                 <TableCell>
@@ -453,7 +454,7 @@ const BookingsPage: React.FC = () => {
                             <CardHeader className="pb-2">
                               <CardTitle className="text-base font-semibold flex items-center">
                                 <Tag className="h-4 w-4 mr-2 text-gray-500" />
-                                Réservation #{booking.id}
+                                Réservation · {reservationReference(booking)}
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="text-sm space-y-1">
@@ -521,8 +522,8 @@ const BookingsPage: React.FC = () => {
           {selectedBooking && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-3 items-center gap-4">
-                <Label className="text-right">ID:</Label>
-                <span className="col-span-2 font-medium">{selectedBooking.id}</span>
+                <Label className="text-right">Référence:</Label>
+                <span className="col-span-2 break-all font-medium">{reservationReference(selectedBooking)}</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
                 <Label className="text-right">Client:</Label>

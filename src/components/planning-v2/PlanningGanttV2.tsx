@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { UserRoom } from '@/lib/user-room-api';
 import { KrossbookingReservation } from '@/lib/krossbooking';
+import { reservationReference } from '@/lib/reservation-labels';
 
 /* -------------------------------------------------------------------------- */
 /*  Constantes de layout (desktop) — versions mobiles calculées plus bas      */
@@ -746,8 +747,7 @@ const ReservationDetailDialog: React.FC<{ parsed: ParsedRes | null; onClose: () 
           <DetailRow label="Prix" value={`${price.toFixed(2)} €`} />
           <DetailRow label="Commission" value={`${commission.toFixed(2)} €`} />
           <DetailRow label="Net estimé" value={<span className="text-emerald-600 font-semibold">{net.toFixed(2)} €</span>} />
-          <DetailRow label="ID réservation" value={<span className="font-mono text-xs">{res.id}</span>} />
-          <DetailRow label="ID chambre" value={<span className="font-mono text-xs">{res.krossbooking_room_id || '—'}</span>} />
+          <DetailRow label="Référence" value={<span className="break-all">{reservationReference(res)}</span>} />
         </div>
       </DialogContent>
     </Dialog>

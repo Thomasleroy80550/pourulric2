@@ -25,10 +25,12 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client'; // Import supabase client
+import { reservationReference } from '@/lib/reservation-labels';
 
 // Define the shape of the booking data that will be passed to the dialog
 interface BookingData {
   id: string;
+  ota_id?: string;
   guest_name: string;
   property_name: string;
   email?: string;
@@ -168,7 +170,7 @@ const ReportProblemDialog: React.FC<ReportProblemDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Signaler un problème pour la réservation</DialogTitle>
           <DialogDescription>
-            Veuillez décrire le problème rencontré avec la réservation de <span className="font-semibold">{booking.guest_name}</span> pour <span className="font-semibold">{booking.property_name}</span> (ID: {booking.id}).
+            Veuillez décrire le problème rencontré avec la réservation de <span className="font-semibold">{booking.guest_name}</span> pour <span className="font-semibold">{booking.property_name}</span> (référence : {reservationReference(booking)}).
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -251,6 +252,7 @@ const BookingsPage: React.FC = () => {
     <MainLayout>
       <div className="container mx-auto py-6">
         <h1 className="text-3xl font-bold mb-6">Réservations pour {userRooms.length > 0 ? 'vos chambres' : 'les chambres'} ({currentYear})</h1>
+        <Button asChild variant="outline" className="mb-4"><Link to="/channel-reservations">Réservations du nouveau channel</Link></Button>
         
         {/* Nouveaux onglets pour basculer entre V1 (Liste) et V2 (Planning) */}
         <Tabs defaultValue="list" className="space-y-4">

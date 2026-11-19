@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useSession } from "@/components/SessionContextProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,10 +45,11 @@ export default function OwnerChannelProperties() {
   return <Card>
     <CardHeader>
       <CardTitle>Mes logements — nouveau channel</CardTitle>
-      <CardDescription>Seuls les logements attribués à votre profil par un administrateur sont affichés. Krossbooking reste actif pour les réservations et les tarifs.</CardDescription>
+      <CardDescription>Seuls les logements attribués à votre profil sont affichés. Les réservations du nouveau channel sont consultables séparément ; Krossbooking reste actif.</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <Button asChild variant="secondary"><Link to="/channel-reservations">Réservations du nouveau channel</Link></Button>
       <Button type="button" variant="outline" disabled={busy || !!retryAt} onClick={() => load(true)}>{busy ? "Chargement…" : loaded ? "Actualiser mes logements" : "Afficher mes logements"}</Button>
       <div className="grid gap-3 sm:grid-cols-2">
         {properties.map(property => <div key={`${property.id}:${property.agency_id}:${property.environment}`} className="rounded-lg border p-4 text-left">

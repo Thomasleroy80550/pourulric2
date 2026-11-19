@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { assignOnboardingBatch, loadOnboardingContext } from "./onboarding.ts";
+import { handleReservations, ReservationRequestError } from "./reservations.ts";
 
 const endpoint = "https://kbdjwnfpgwzbxskiaddg.supabase.co/functions/v1/owner-site-properties";
 const corsHeaders = {
@@ -60,6 +61,9 @@ serve(async (req) => {
     const adminActions = ["catalog", "assignments", "assign", "unassign", "onboarding_context", "assign_batch"];
     if (adminActions.includes(body.action) && !isAdmin) return json({ error: "Accès réservé aux administrateurs." }, 403);
 
+    if (["reservation_sources", "reservation_cache", "reservation_sync_start", "reservation_sync_page"].includes(body.action)) {
+      return json(await handleReservations(db, body, auth.user.id, isAdmin, upstream));
+    }
     if (body.action === "onboarding_context") return json(await loadOnboardingContext(db));
     if (body.action === "assign_batch") {
       const result = await assignOnboardingBatch(db, body, upstream);
@@ -122,7 +126,7 @@ serve(async (req) => {
     }
     return json({ error: "Action inconnue." }, 400);
   } catch (error) {
-    if (error instanceof RequestError) return json({ error: error.message }, error.status);
+    if (error instanceof RequestError || error instanceof ReservationRequestError) return json({ error: error.message }, error.status);
     console.error("[owner-channel-proxy] request failed", { message: error instanceof Error ? error.message : "Unknown error" });
     return json({ error: "Impossible de traiter la demande du channel." }, 500);
   }

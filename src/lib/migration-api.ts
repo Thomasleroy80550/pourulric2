@@ -4,8 +4,20 @@ import { maintenanceClient } from "@/integrations/supabase/maintenance-client";
 
 export const REOPENING_TIME = new Date("2026-11-19T19:30:00+01:00").getTime();
 
+const PREVIEW_KEY = "hk-apercu-reouverture";
+
+export function isReopenedNow(): boolean {
+  if (typeof window !== "undefined") {
+    const preview = new URLSearchParams(window.location.search).get("apercu");
+    if (preview === "reouverture") window.sessionStorage.setItem(PREVIEW_KEY, "1");
+    else if (preview === "off") window.sessionStorage.removeItem(PREVIEW_KEY);
+    if (window.sessionStorage.getItem(PREVIEW_KEY) === "1") return true;
+  }
+  return Date.now() >= REOPENING_TIME;
+}
+
 export function useReopened(): boolean {
-  const [reopened, setReopened] = useState(() => Date.now() >= REOPENING_TIME);
+  const [reopened, setReopened] = useState(isReopenedNow);
   useEffect(() => {
     const remaining = REOPENING_TIME - Date.now();
     if (remaining <= 0) return;

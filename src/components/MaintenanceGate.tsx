@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import MaintenancePage from "@/pages/MaintenancePage";
 import MigrationBanner from "@/components/MigrationBanner";
 import { maintenanceAdminEmail } from "@/components/MaintenanceAdminAccess";
-import { REOPENING_TIME, useReopened } from "@/lib/migration-api";
+import { isReopenedNow, useReopened } from "@/lib/migration-api";
 
 export default function MaintenanceGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
@@ -18,7 +18,7 @@ export default function MaintenanceGate({ children }: { children: ReactNode }) {
     let timer: number | undefined;
 
     const verify = async (session: Session | null) => {
-      if (Date.now() >= REOPENING_TIME) return; // Site rouvert : on ne touche plus aux sessions
+      if (isReopenedNow()) return; // Site rouvert (ou aperçu) : on ne touche plus aux sessions
       const checkVersion = ++version;
       if (!session || session.user.email?.toLowerCase() !== maintenanceAdminEmail) {
         if (active) setAllowed(false);

@@ -32,6 +32,7 @@ import AdminLeaderboardPage from "./pages/AdminLeaderboardPage";
 import AdminAgencyComparisonPage from "./pages/AdminAgencyComparisonPage";
 import AdminTransferSummaryPage from "./pages/AdminTransferSummaryPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminChannelOnboardingPage from "./pages/AdminChannelOnboardingPage";
 import AdminHousingRegistrationsPage from "./pages/AdminHousingRegistrationsPage";
 import HousingRegistrationPage from "./pages/HousingRegistrationPage";
 import AdminDelegatedAccessPage from "./pages/AdminDelegatedAccessPage";
@@ -232,6 +233,7 @@ function App() {
                       <Route path="/admin/agency-comparison" element={<AdminAgencyComparisonPage />} />
                       <Route path="/admin/transfer-summary" element={<AdminTransferSummaryPage />} />
                       <Route path="/admin/users" element={<AdminUsersPage />} />
+                      <Route path="/admin/channel-onboarding" element={<AdminChannelOnboardingPage />} />
                       <Route path="/admin/housing-registrations" element={<AdminHousingRegistrationsPage />} />
                       <Route path="/admin/delegated-access" element={<AdminDelegatedAccessPage />} />
                       <Route path="/admin/settings" element={<AdminSettingsPage />} />

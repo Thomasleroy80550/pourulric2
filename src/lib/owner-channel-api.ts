@@ -43,3 +43,29 @@ export const getMyChannelProperties = (cursor: string | null = null) => invoke<C
 export const getChannelAssignments = (clientProfileId: string) => invoke<{ assignments: ChannelAssignment[] }>({ action: "assignments", client_profile_id: clientProfileId });
 export const assignChannelProperty = (clientProfileId: string, propertyId: string) => invoke<{ success: boolean }>({ action: "assign", client_profile_id: clientProfileId, property_id: propertyId });
 export const unassignChannelProperty = (assignmentId: string) => invoke<{ success: boolean }>({ action: "unassign", assignment_id: assignmentId });
+
+export interface OnboardingOwner {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  property_address: string | null;
+  property_city: string | null;
+}
+export interface OnboardingContext {
+  owners: OnboardingOwner[];
+  rooms: { user_id: string; room_name: string }[];
+  assignments: ChannelAssignment[];
+}
+export interface OnboardingSelection {
+  property_id: string;
+  client_profile_id: string;
+}
+export interface OnboardingBatchResult {
+  results: (OnboardingSelection & { success: boolean; message: string })[];
+  retry_after: number;
+  stopped: boolean;
+}
+export const getChannelOnboardingContext = () => invoke<OnboardingContext>({ action: "onboarding_context" });
+export const assignChannelOnboardingBatch = (selections: OnboardingSelection[], agencyId: string, environment: string) =>
+  invoke<OnboardingBatchResult>({ action: "assign_batch", selections, agency_id: agencyId, environment });

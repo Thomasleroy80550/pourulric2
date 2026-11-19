@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,7 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
         <CardDescription>Attributions indépendantes de Krossbooking. Un profil peut avoir plusieurs logements. Les modifications sont enregistrées immédiatement.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <Button asChild variant="outline"><Link to="/admin/channel-onboarding">Onboarding et attributions en lot</Link></Button>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <div className="space-y-2">
           <h3 className="font-medium">Logements attribués ({assignments.length})</h3>

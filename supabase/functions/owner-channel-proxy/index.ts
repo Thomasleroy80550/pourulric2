@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { assignOnboardingBatch, loadOnboardingContext } from "./onboarding.ts";
 
 const endpoint = "https://kbdjwnfpgwzbxskiaddg.supabase.co/functions/v1/owner-site-properties";
 const corsHeaders = {
@@ -56,9 +57,14 @@ serve(async (req) => {
     const body = await req.json().catch(() => null);
     if (!body || typeof body.action !== "string") return json({ error: "Action requise." }, 400);
     const isAdmin = profile.role === "admin";
-    const adminActions = ["catalog", "assignments", "assign", "unassign"];
+    const adminActions = ["catalog", "assignments", "assign", "unassign", "onboarding_context", "assign_batch"];
     if (adminActions.includes(body.action) && !isAdmin) return json({ error: "Accès réservé aux administrateurs." }, 403);
 
+    if (body.action === "onboarding_context") return json(await loadOnboardingContext(db));
+    if (body.action === "assign_batch") {
+      const result = await assignOnboardingBatch(db, body, upstream);
+      return json(result.body, result.status);
+    }
     if (body.action === "catalog") {
       if (body.cursor != null && (typeof body.cursor !== "string" || body.cursor.length > 4096)) return json({ error: "Curseur invalide." }, 400);
       return json(await upstream({ limit: "100", ...(body.cursor ? { cursor: body.cursor } : {}) }));

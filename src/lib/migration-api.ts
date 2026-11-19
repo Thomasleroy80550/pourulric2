@@ -1,5 +1,19 @@
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { maintenanceClient } from "@/integrations/supabase/maintenance-client";
+
+export const REOPENING_TIME = new Date("2026-11-19T19:30:00+01:00").getTime();
+
+export function useReopened(): boolean {
+  const [reopened, setReopened] = useState(() => Date.now() >= REOPENING_TIME);
+  useEffect(() => {
+    const remaining = REOPENING_TIME - Date.now();
+    if (remaining <= 0) return;
+    const timer = window.setTimeout(() => setReopened(true), remaining + 250);
+    return () => window.clearTimeout(timer);
+  }, []);
+  return reopened;
+}
 
 export const migrationSteps = [
   { key: "backup_completed", label: "Sauvegarde des données" },

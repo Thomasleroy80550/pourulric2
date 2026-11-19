@@ -8,7 +8,7 @@ import MaintenanceAdminAccess from "@/components/MaintenanceAdminAccess";
 import MaintenanceQuestions from "@/components/MaintenanceQuestions";
 import MaintenanceCountdown from "@/components/MaintenanceCountdown";
 import MobileMaintenance from "@/components/MobileMaintenance";
-import { getMigrationProgress, migrationSteps } from "@/lib/migration-api";
+import { getMigrationProgress, migrationSteps, useReopened } from "@/lib/migration-api";
 import "@/styles/maintenance.css";
 
 export default function MaintenancePage() {
@@ -37,10 +37,11 @@ export default function MaintenancePage() {
   }, []);
 
   const completedCount = migration ? migrationSteps.filter((step) => migration[step.key] === 100).length : 0;
+  const reopened = useReopened() || migration?.platform_reopened === 100;
 
   return (
     <>
-    <MobileMaintenance migration={migration} online={online} pending={isPending} error={isError} fetching={isFetching} refresh={() => void refetch()} />
+    <MobileMaintenance migration={migration} online={online} pending={isPending} error={isError} fetching={isFetching} refresh={() => void refetch()} reopened={reopened} />
     <main className="relative hidden min-h-dvh bg-[#fafafa] text-slate-900 selection:bg-red-100 lg:block">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-96 bg-[radial-gradient(#d4d4d8_0.6px,transparent_0.6px)] bg-[size:20px_20px] opacity-30 [mask-image:linear-gradient(to_bottom,black,transparent)]" />
@@ -52,9 +53,9 @@ export default function MaintenancePage() {
             <img src="/logo.png" alt="Hello Keys" className="h-9 w-auto object-contain" />
             <span className="border-l border-slate-200 pl-3 text-xs text-slate-400">Journal de migration</span>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-50/80 px-2.5 py-1 text-xs font-medium text-amber-800">
-            <span className="relative flex h-1.5 w-1.5"><span className="absolute h-full w-full animate-ping rounded-full bg-amber-400 opacity-50 motion-reduce:animate-none" /><span className="relative h-1.5 w-1.5 rounded-full bg-amber-500" /></span>
-            Maintenance en cours
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${reopened ? "border-emerald-200/80 bg-emerald-50/80 text-emerald-800" : "border-amber-200/80 bg-amber-50/80 text-amber-800"}`}>
+            <span className="relative flex h-1.5 w-1.5"><span className={`absolute h-full w-full animate-ping rounded-full opacity-50 motion-reduce:animate-none ${reopened ? "bg-emerald-400" : "bg-amber-400"}`} /><span className={`relative h-1.5 w-1.5 rounded-full ${reopened ? "bg-emerald-500" : "bg-amber-500"}`} /></span>
+            {reopened ? "Réouverture effectuée" : "Maintenance en cours"}
           </span>
         </header>
 
@@ -65,12 +66,19 @@ export default function MaintenancePage() {
           <p className="mt-3 text-xs font-medium text-slate-400">Migration du 16 au 19 novembre 2026</p>
         </section>
 
-        <section aria-label="Report de la réouverture" className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4">
-          <p className="flex items-center justify-center gap-2 text-sm font-semibold text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> Réouverture décalée de 24 h — incident chez notre partenaire Abritel</p>
-          <p className="mt-2 text-center text-xs leading-relaxed text-amber-900/80">Chaque équipe technique suit son propre calendrier de déploiement : <strong>le nôtre a été tenu et nos travaux étaient terminés dans les temps</strong>. La plateforme Abritel a accusé environ 6 h de retard dans le traitement de ses flux de synchronisation (API de distribution / channel manager). Ce retard, indépendant de notre volonté, bloque le déploiement et le mapping de vos logements sur ce canal — sans sa validation, nous ne pouvons pas rouvrir en toute sécurité.</p>
-        </section>
+        {reopened ? (
+          <section aria-label="Canal Abritel en cours d'activation" className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4">
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> Plateforme rouverte — le canal Abritel reste en cours d’activation</p>
+            <p className="mt-2 text-center text-xs leading-relaxed text-amber-900/80">Votre espace propriétaire et vos annonces sont de nouveau accessibles. L’onboarding de vos logements se poursuit côté Abritel, avec une finalisation prévue <strong>lundi 23 novembre</strong> : vos annonces ne sont donc pas encore diffusées sur ce canal. Tous les autres canaux sont opérationnels.</p>
+          </section>
+        ) : (
+          <section aria-label="Report de la réouverture" className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50/80 px-5 py-4">
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-amber-900"><AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" /> Réouverture décalée de 24 h — incident chez notre partenaire Abritel</p>
+            <p className="mt-2 text-center text-xs leading-relaxed text-amber-900/80">Chaque équipe technique suit son propre calendrier de déploiement : <strong>le nôtre a été tenu et nos travaux étaient terminés dans les temps</strong>. La plateforme Abritel a accusé environ 6 h de retard dans le traitement de ses flux de synchronisation (API de distribution / channel manager). Ce retard, indépendant de notre volonté, bloque le déploiement et le mapping de vos logements sur ce canal — sans sa validation, nous ne pouvons pas rouvrir en toute sécurité.</p>
+          </section>
+        )}
 
-        <MaintenanceCountdown reopened={migration?.platform_reopened === 100} />
+        <MaintenanceCountdown reopened={reopened} />
 
         <div aria-hidden="true" className="my-12 h-px w-full bg-slate-200/80" />
 

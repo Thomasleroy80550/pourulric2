@@ -114,6 +114,7 @@ import AdminStripeDuplicatesPage from "./pages/AdminStripeDuplicatesPage";
 
 import AdminStatusPage from "./pages/AdminStatusPage";
 import StatusPage from "./pages/StatusPage";
+import MaintenancePage from "./pages/MaintenancePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import MySeasonPricesPage from "./pages/MySeasonPricesPage";
 import LaundryOrdersPage from "./pages/LaundryOrdersPage";
@@ -282,6 +283,7 @@ function App() {
                       <Route path="/admin/mini-sites" element={<AdminMiniSitesPage />} />
                       <Route path="/admin/domain-requests" element={<AdminDomainRequestsPage />} />
                       <Route path="/status" element={<StatusPage />} />
+                      <Route path="/migration" element={<MaintenancePage />} />
                       <Route path="/housekeeping-reports" element={<HousekeepingReportsPage />} />
                       <Route path="/housekeeping" element={<HousekeepingTasksPage />} />
                       <Route path="/pages/:slug" element={<ContentPage />} />

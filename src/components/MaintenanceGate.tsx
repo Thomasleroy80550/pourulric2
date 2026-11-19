@@ -5,10 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import MaintenancePage from "@/pages/MaintenancePage";
 import MigrationBanner from "@/components/MigrationBanner";
 import { maintenanceAdminEmail } from "@/components/MaintenanceAdminAccess";
+import { REOPENING_TIME, useReopened } from "@/lib/migration-api";
 
 export default function MaintenanceGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const [allowed, setAllowed] = useState(false);
+  const reopened = useReopened();
 
   useEffect(() => {
     let active = true;
@@ -16,6 +18,7 @@ export default function MaintenanceGate({ children }: { children: ReactNode }) {
     let timer: number | undefined;
 
     const verify = async (session: Session | null) => {
+      if (Date.now() >= REOPENING_TIME) return; // Site rouvert : on ne touche plus aux sessions
       const checkVersion = ++version;
       if (!session || session.user.email?.toLowerCase() !== maintenanceAdminEmail) {
         if (active) setAllowed(false);
@@ -42,6 +45,8 @@ export default function MaintenanceGate({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  if (reopened) return <><MigrationBanner />{children}</>;
 
   const administration = pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/admin-v2" || pathname.startsWith("/admin-v2/");
   return administration && allowed ? <><MigrationBanner />{children}</> : <MaintenancePage />;

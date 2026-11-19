@@ -14,9 +14,10 @@ interface MobileMaintenanceProps {
   error: boolean;
   fetching: boolean;
   refresh: () => void;
+  reopened: boolean;
 }
 
-export default function MobileMaintenance({ migration, online, pending, error, fetching, refresh }: MobileMaintenanceProps) {
+export default function MobileMaintenance({ migration, online, pending, error, fetching, refresh, reopened }: MobileMaintenanceProps) {
   const [tab, setTab] = useState<"progress" | "notes">("progress");
   const completed = migration ? migrationSteps.filter((step) => migration[step.key] === 100).length : 0;
   const circumference = 2 * Math.PI * 34;
@@ -26,9 +27,9 @@ export default function MobileMaintenance({ migration, online, pending, error, f
       <header className="flex shrink-0 items-center justify-between gap-3 px-[max(1rem,env(safe-area-inset-left))] pb-3 pr-[max(1rem,env(safe-area-inset-right))] pt-[max(0.75rem,env(safe-area-inset-top))]">
         <img src="/logo.png" alt="Hello Keys" className="h-7 w-auto max-w-[125px] object-contain" />
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-semibold ${online ? "bg-amber-100/70 text-amber-700" : "bg-slate-200 text-slate-600"}`}>
-            {online ? <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> : <WifiOff className="h-3 w-3" aria-hidden="true" />}
-            {online ? "Maintenance" : "Hors ligne"}
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-semibold ${!online ? "bg-slate-200 text-slate-600" : reopened ? "bg-emerald-100/70 text-emerald-700" : "bg-amber-100/70 text-amber-700"}`}>
+            {online ? <span className={`h-1.5 w-1.5 rounded-full ${reopened ? "bg-emerald-500" : "bg-amber-500"}`} /> : <WifiOff className="h-3 w-3" aria-hidden="true" />}
+            {!online ? "Hors ligne" : reopened ? "Réouvert" : "Maintenance"}
           </span>
           <Button variant="ghost" size="icon" aria-label="Actualiser la progression" disabled={fetching || !online} onClick={refresh} className="h-9 w-9 rounded-full bg-white text-slate-500 shadow-sm">
             <RefreshCw className={`h-3.5 w-3.5 ${fetching ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" />
@@ -53,11 +54,20 @@ export default function MobileMaintenance({ migration, online, pending, error, f
         </section>
 
         <section aria-label="Report de la réouverture" className="maintenance-mobile-delay mt-2.5 shrink-0 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
-          <p className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900"><AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" /> Réouverture décalée de 24 h — incident Abritel</p>
-          <p className="mt-0.5 text-[8px] leading-snug text-amber-800/90">Nos travaux étaient terminés dans les temps ; le partenaire Abritel a accusé ~6 h de retard sur ses flux de synchronisation, ce qui bloque le déploiement de vos logements.</p>
+          {reopened ? (
+            <>
+              <p className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900"><AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" /> Plateforme rouverte — canal Abritel en activation</p>
+              <p className="mt-0.5 text-[8px] leading-snug text-amber-800/90">L’onboarding se poursuit côté Abritel, finalisation prévue lundi 23 novembre : vos annonces ne sont pas encore diffusées sur ce canal.</p>
+            </>
+          ) : (
+            <>
+              <p className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-900"><AlertTriangle className="h-3 w-3 shrink-0" aria-hidden="true" /> Réouverture décalée de 24 h — incident Abritel</p>
+              <p className="mt-0.5 text-[8px] leading-snug text-amber-800/90">Nos travaux étaient terminés dans les temps ; le partenaire Abritel a accusé ~6 h de retard sur ses flux de synchronisation, ce qui bloque le déploiement de vos logements.</p>
+            </>
+          )}
         </section>
 
-        <MaintenanceCountdown compact reopened={migration?.platform_reopened === 100} />
+        <MaintenanceCountdown compact reopened={reopened} />
 
         {tab === "progress" ? (
           <section className="flex min-h-0 flex-1 flex-col pt-2" aria-labelledby="mobile-migration-steps-title">

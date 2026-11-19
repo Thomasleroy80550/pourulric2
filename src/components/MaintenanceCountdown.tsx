@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { REOPENING_TIME } from "@/lib/migration-api";
 
-const reopeningTime = new Date("2026-11-19T19:30:00+01:00").getTime();
+const reopeningTime = REOPENING_TIME;
 
 const labels = ["jours", "heures", "min", "sec"] as const;
 const shorts = ["j", "h", "min", "s"] as const;

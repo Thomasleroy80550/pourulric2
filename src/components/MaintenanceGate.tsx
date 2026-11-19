@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import MaintenancePage from "@/pages/MaintenancePage";
 import MigrationBanner from "@/components/MigrationBanner";
-import PostMigrationWelcome from "@/components/PostMigrationWelcome";
 import { maintenanceAdminEmail } from "@/components/MaintenanceAdminAccess";
 import { isReopenedNow, useReopened } from "@/lib/migration-api";
 
@@ -47,7 +46,7 @@ export default function MaintenanceGate({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  if (reopened) return <><MigrationBanner /><PostMigrationWelcome />{children}</>;
+  if (reopened) return <><MigrationBanner />{children}</>;
 
   const administration = pathname === "/admin" || pathname.startsWith("/admin/") || pathname === "/admin-v2" || pathname.startsWith("/admin-v2/");
   return administration && allowed ? <><MigrationBanner />{children}</> : <MaintenancePage />;

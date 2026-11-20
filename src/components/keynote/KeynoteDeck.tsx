@@ -9,7 +9,7 @@ import { keynoteSlides as slides } from "./deck";
 const STAGE_WIDTH = 1280;
 const STAGE_HEIGHT = 720;
 
-const notesHeading = "text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500";
+const notesHeading = "text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500";
 
 // Espaces insécables de la typographie française : jamais de « ? » ou de « : » en début de ligne.
 const frenchSpacing = (text: string) => text.replace(/ (?=[:;?!»])/g, "\u00A0").replace(/« /g, "«\u00A0");
@@ -29,8 +29,8 @@ function ToolbarButton({
       aria-label={label}
       aria-pressed={pressed}
       className={cn(
-        "gap-2 text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:ring-hk-300 focus-visible:ring-offset-0 [&_svg]:h-4 [&_svg]:w-4",
-        pressed && "bg-white/10 text-white",
+        "gap-2 text-neutral-500 hover:bg-black/[0.04] hover:text-neutral-950 focus-visible:ring-hk-500 focus-visible:ring-offset-0 [&_svg]:h-4 [&_svg]:w-4",
+        pressed && "bg-black/[0.05] text-neutral-950",
         className,
       )}
       {...props}
@@ -39,7 +39,7 @@ function ToolbarButton({
 }
 
 function Shortcut({ children }: { children: string }) {
-  return <kbd className="rounded border border-white/15 px-1.5 font-sans text-[11px] text-zinc-500">{children}</kbd>;
+  return <kbd className="rounded border border-black/10 px-1.5 font-sans text-[11px] text-neutral-400">{children}</kbd>;
 }
 
 export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
@@ -146,7 +146,11 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
   return (
     <div
       ref={rootRef}
-      className="fixed inset-0 z-50 flex flex-col bg-black text-white antialiased [font-family:Inter,ui-sans-serif,system-ui,sans-serif]"
+      className="fixed inset-0 z-50 flex flex-col bg-[#f5f5f7] text-neutral-950 antialiased"
+      style={{
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, ui-sans-serif, system-ui, sans-serif",
+      }}
     >
       <div ref={hostRef} className="relative min-h-0 flex-1 overflow-hidden">
         <div
@@ -165,7 +169,7 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
             <Slide />
           </div>
         </div>
-        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-white/5">
+        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-black/[0.05]">
           <div
             className="h-full bg-hk-500 transition-[width] duration-500"
             style={{ width: `${((index + 1) / slides.length) * 100}%` }}
@@ -177,13 +181,13 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
         <aside
           key={slide.id}
           aria-label="Notes orateur"
-          className="h-[40%] shrink-0 overflow-y-auto border-t border-white/10 bg-zinc-950 px-8 pb-14 pt-6"
+          className="h-[40%] shrink-0 overflow-y-auto border-t border-black/10 bg-white/95 px-8 pb-14 pt-6 backdrop-blur-xl"
         >
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
               <section>
                 <h2 className={notesHeading}>Notes orateur · {slide.label}</h2>
-                <div className="mt-3 space-y-3 text-[17px] leading-relaxed text-zinc-200">
+                <div className="mt-3 space-y-3 text-[17px] leading-relaxed text-neutral-700">
                   {slide.notes.map((paragraph) => (
                     <p key={paragraph}>{frenchSpacing(paragraph)}</p>
                   ))}
@@ -192,12 +196,12 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
               <section className="space-y-6">
                 <div>
                   <h2 className={notesHeading}>Transition</h2>
-                  <p className="mt-3 text-[17px] leading-relaxed text-hk-200">{frenchSpacing(slide.transition)}</p>
+                  <p className="mt-3 text-[17px] leading-relaxed text-hk-700">{frenchSpacing(slide.transition)}</p>
                 </div>
                 {nextSlide && (
                   <div>
                     <h2 className={notesHeading}>Slide suivante</h2>
-                    <p className="mt-3 text-[17px] text-zinc-400">
+                    <p className="mt-3 text-[17px] text-neutral-500">
                       {index + 2}. {nextSlide.label}
                     </p>
                   </div>
@@ -211,7 +215,7 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
                   Antisèche : le détail technique par capacité, pour les questions
                 </caption>
                 <thead>
-                  <tr className="border-b border-white/10 text-zinc-500">
+                  <tr className="border-b border-black/10 text-neutral-500">
                     <th className="py-2 pr-6 font-medium">Capacité</th>
                     <th className="py-2 pr-6 font-medium">Source</th>
                     <th className="py-2 font-medium">À dire simplement</th>
@@ -219,12 +223,12 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
                 </thead>
                 <tbody>
                   {slide.cheatSheet.map((row, rowIndex) => (
-                    <tr key={row.capacity} className="border-b border-white/5 align-top">
-                      <td className="whitespace-nowrap py-2 pr-6 text-zinc-200">
+                    <tr key={row.capacity} className="border-b border-black/[0.06] align-top">
+                      <td className="whitespace-nowrap py-2 pr-6 text-neutral-800">
                         {rowIndex + 1}. {row.capacity}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-6 font-mono text-[12.5px] text-hk-200">{row.source}</td>
-                      <td className="py-2 leading-relaxed text-zinc-300">{frenchSpacing(row.say)}</td>
+                      <td className="whitespace-nowrap py-2 pr-6 font-mono text-[12.5px] text-hk-700">{row.source}</td>
+                      <td className="py-2 leading-relaxed text-neutral-600">{frenchSpacing(row.say)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -238,7 +242,7 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
       <div
         onMouseDown={(event) => event.preventDefault()}
         className={cn(
-          "flex h-12 shrink-0 items-center gap-1 border-t border-white/10 bg-zinc-950 px-2 text-sm",
+          "flex h-12 shrink-0 items-center gap-1 border-t border-black/10 bg-white/85 px-2 text-sm backdrop-blur-xl",
           isFullscreen &&
             "absolute inset-x-0 bottom-0 opacity-0 transition-opacity duration-300 focus-within:opacity-100 hover:opacity-100",
         )}
@@ -247,10 +251,10 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
           <X />
           Quitter
         </ToolbarButton>
-        <span className="ml-3 tabular-nums text-zinc-300">
+        <span className="ml-3 tabular-nums text-neutral-700">
           {index + 1} / {slides.length}
         </span>
-        <span className="ml-3 truncate text-zinc-500">{slide.label}</span>
+        <span className="ml-3 truncate text-neutral-400">{slide.label}</span>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <ToolbarButton label="Slide précédente (←)" disabled={index === 0} onClick={() => goTo(index - 1)}>

@@ -35,7 +35,7 @@ export function SlideFrame({ className, children }: BaseProps) {
   return (
     <section
       className={cn(
-        "relative isolate flex h-full w-full flex-col overflow-hidden bg-black px-20 py-14 text-white",
+        "relative isolate flex h-full w-full flex-col overflow-hidden bg-[#f5f5f7] px-20 py-14 text-neutral-950",
         className,
       )}
     >
@@ -44,13 +44,13 @@ export function SlideFrame({ className, children }: BaseProps) {
   );
 }
 
-/** Halo décoratif : le dégradé s'éteint avant les bords de sa boîte, donc sans coupure visible. */
+/** Halo pastel : le dégradé s'éteint avant les bords de sa boîte, donc sans coupure visible. */
 export function Glow({ className }: { className?: string }) {
   return (
     <div
       aria-hidden
       className={cn(
-        "pointer-events-none absolute -z-10 bg-[radial-gradient(closest-side,hsl(200_65%_40%/0.22),transparent)]",
+        "pointer-events-none absolute -z-10 bg-[radial-gradient(closest-side,hsl(204_100%_60%/0.18),transparent)]",
         className,
       )}
     />
@@ -69,14 +69,14 @@ export function SlideHeader({
         <p
           className={cn(
             "mb-4 text-sm font-semibold uppercase tracking-[0.28em]",
-            muted ? "text-zinc-500" : "text-hk-300",
+            muted ? "text-neutral-500" : "text-hk-600",
           )}
         >
           {kicker}
         </p>
       </Reveal>
       <Reveal delay={150}>
-        <h2 className={cn("text-balance text-[50px] font-semibold leading-[1.1] tracking-tight", className)}>
+        <h2 className={cn("text-balance text-[56px] font-semibold leading-[1.02] tracking-[-0.04em] text-neutral-950", className)}>
           {children}
         </h2>
       </Reveal>
@@ -86,10 +86,10 @@ export function SlideHeader({
 
 export function Bullets({ items, className }: { items: ReactNode[]; className?: string }) {
   return (
-    <ul className={cn("space-y-4 text-[21px] leading-snug text-zinc-200", className)}>
+    <ul className={cn("space-y-4 text-[21px] leading-snug text-neutral-600", className)}>
       {items.map((item, index) => (
         <Reveal as="li" key={index} delay={450 + index * 170} className="flex gap-4">
-          <span aria-hidden className="mt-[0.5em] h-2 w-2 shrink-0 rounded-full bg-hk-300" />
+          <span aria-hidden className="mt-[0.5em] h-2 w-2 shrink-0 rounded-full bg-hk-500" />
           <span>{item}</span>
         </Reveal>
       ))}
@@ -112,20 +112,29 @@ export function BigFigure({
     <div>
       <p
         className={cn(
-          "whitespace-nowrap bg-gradient-to-b bg-clip-text pb-1 text-[104px] font-semibold leading-none tracking-tighter text-transparent",
-          muted ? "from-zinc-400 to-zinc-700" : "from-white to-hk-300",
+          "whitespace-nowrap bg-gradient-to-b bg-clip-text pb-1 text-[104px] font-semibold leading-none tracking-[-0.06em] text-transparent",
+          muted ? "from-neutral-500 to-neutral-300" : "from-neutral-950 via-neutral-800 to-hk-600",
           className,
         )}
       >
         {value}
       </p>
-      {caption && <p className="mt-2 text-lg leading-snug text-zinc-400">{caption}</p>}
+      {caption && <p className="mt-2 text-lg leading-snug text-neutral-500">{caption}</p>}
     </div>
   );
 }
 
 export function Panel({ className, children }: BaseProps) {
-  return <div className={cn("rounded-2xl border border-white/10 bg-white/[0.04]", className)}>{children}</div>;
+  return (
+    <div
+      className={cn(
+        "rounded-[28px] border border-black/[0.06] bg-white/85 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function IconBadge({
@@ -140,8 +149,8 @@ export function IconBadge({
   return (
     <span
       className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-        muted ? "bg-white/[0.06] text-zinc-400" : "bg-hk-500/20 text-hk-300",
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl",
+        muted ? "bg-black/[0.04] text-neutral-500" : "bg-hk-500/10 text-hk-600",
         className,
       )}
     >
@@ -154,7 +163,7 @@ export function Chip({ className, children }: BaseProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-[13px] leading-none text-zinc-200",
+        "inline-flex items-center rounded-full border border-black/[0.08] bg-white/75 px-2.5 py-1.5 text-[13px] leading-none text-neutral-700 shadow-sm",
         className,
       )}
     >
@@ -165,10 +174,17 @@ export function Chip({ className, children }: BaseProps) {
 
 /** Légende technique, volontairement discrète. */
 export function TechNote({ className, children }: BaseProps) {
-  return <p className={cn("font-mono text-[12.5px] text-zinc-500", className)}>{children}</p>;
+  return <p className={cn("font-mono text-[12.5px] text-neutral-500", className)}>{children}</p>;
 }
 
 /** Mot-symbole typographique : aucun logo Cadence n'est fourni dans le projet. */
 export function Wordmark({ className }: { className?: string }) {
-  return <span className={cn("text-2xl font-semibold tracking-tight text-white", className)}>Cadence</span>;
+  return (
+    <span className={cn("inline-flex flex-col items-center", className)}>
+      <span className="text-[26px] font-semibold tracking-[-0.04em] text-neutral-950">Cadence</span>
+      <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-neutral-500">
+        par Hello Keys
+      </span>
+    </span>
+  );
 }

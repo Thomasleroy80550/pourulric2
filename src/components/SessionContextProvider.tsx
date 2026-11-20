@@ -114,7 +114,7 @@ export const SessionContextProvider: React.FC<{ children: React.ReactNode }> = (
       housingDismissedRef.current = false;
       setShowOnboardingConfetti(false);
       // Whitelist des pages publiques (pas de redirection)
-      const publicPaths = ['/login', '/v4/login', '/prospect-signup', '/redeem-invite', '/rejoindre-espace', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi', '/installer'];
+      const publicPaths = ['/login', '/v4/login', '/prospect-signup', '/redeem-invite', '/rejoindre-espace', '/sites/', '/smart-pricing', '/logement/', '/signalement/', '/suivi', '/installer', '/keynote'];
       const isPublicPath = publicPaths.some((p) => location.pathname.startsWith(p));
 
       if (!isPublicPath) {

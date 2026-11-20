@@ -305,6 +305,7 @@ function App() {
                       <Route path="/signalement/:reportId" element={<GuestReportStatusPage />} />
                       <Route path="/suivi" element={<GuestTrackLookupPage />} />
                       <Route path="/installer" element={<InstallAppPage />} />
+                      <Route path="/keynote" element={<KeynotePage />} />
                       <Route path="/profile" element={<ProfilePage />} />
 
                       <Route path="/announcements" element={<AnnouncementsPage />} />

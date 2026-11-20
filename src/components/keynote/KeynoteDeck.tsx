@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Maximize, Minimize, StickyNote, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Maximize, Minimize, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -11,10 +11,6 @@ import { MobileSlide } from "./mobileSlide";
 const STAGE_WIDTH = 1280;
 const STAGE_HEIGHT = 720;
 
-const notesHeading = "text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500";
-
-// Espaces insécables de la typographie française : jamais de « ? » ou de « : » en début de ligne.
-const frenchSpacing = (text: string) => text.replace(/ (?=[:;?!»])/g, "\u00A0").replace(/« /g, "«\u00A0");
 
 function ToolbarButton({
   label,
@@ -97,7 +93,6 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [scale, setScale] = useState(1);
-  const [notesOpen, setNotesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hintVisible, setHintVisible] = useState(true);
   const isMobile = useIsMobile();
@@ -107,7 +102,6 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
   const requested = Number(searchParams.get("slide"));
   const index = Number.isInteger(requested) && requested >= 1 && requested <= slides.length ? requested - 1 : 0;
   const slide = slides[index];
-  const nextSlide = slides[index + 1];
   const Slide = slide.Component;
 
   // Écran d'accueil : un lien direct vers une slide (?slide=N) saute l'opener.
@@ -219,10 +213,6 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
         case "F":
           if (!event.repeat) void toggleFullscreen();
           break;
-        case "n":
-        case "N":
-          if (!event.repeat) setNotesOpen((open) => !open);
-          break;
         default:
           return;
       }
@@ -267,9 +257,7 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
             <p className="mt-6 text-sm text-neutral-400">
               {slides.length} slides · ~10 minutes
             </p>
-            <p className="mt-2 hidden text-xs text-neutral-400 md:block">
-              Astuce : ← → pour naviguer, N pour les notes orateur
-            </p>
+            <p className="mt-2 hidden text-xs text-neutral-400 md:block">Astuce : ← → pour naviguer</p>
             <p className="mt-2 text-xs text-neutral-400 md:hidden">Glissez ou utilisez les flèches pour naviguer</p>
             <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-300">
               Cadence · par Hello Keys
@@ -329,7 +317,7 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
       )}
 
       {/* Grandes flèches latérales : ordinateur uniquement, pour ne jamais couvrir le texte sur mobile. */}
-      {started && !notesOpen && (
+      {started && (
         <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 hidden items-center px-3 md:flex sm:px-5">
           <NavigationArrow direction="previous" disabled={index === 0} onClick={() => goTo(index - 1)} />
           <NavigationArrow
@@ -338,67 +326,6 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
             onClick={() => goTo(index + 1)}
           />
         </div>
-      )}
-
-      {notesOpen && (
-        <aside
-          key={slide.id}
-          aria-label="Notes orateur"
-          className="h-[40%] shrink-0 overflow-y-auto border-t border-black/10 bg-white/95 px-4 pb-14 pt-6 backdrop-blur-xl sm:px-8"
-        >
-          <div className="mx-auto max-w-6xl">
-            <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              <section>
-                <h2 className={notesHeading}>Notes orateur · {slide.label}</h2>
-                <div className="mt-3 space-y-3 text-[17px] leading-relaxed text-neutral-700">
-                  {slide.notes.map((paragraph) => (
-                    <p key={paragraph}>{frenchSpacing(paragraph)}</p>
-                  ))}
-                </div>
-              </section>
-              <section className="space-y-6">
-                <div>
-                  <h2 className={notesHeading}>Transition</h2>
-                  <p className="mt-3 text-[17px] leading-relaxed text-hk-700">{frenchSpacing(slide.transition)}</p>
-                </div>
-                {nextSlide && (
-                  <div>
-                    <h2 className={notesHeading}>Slide suivante</h2>
-                    <p className="mt-3 text-[17px] text-neutral-500">
-                      {index + 2}. {nextSlide.label}
-                    </p>
-                  </div>
-                )}
-              </section>
-            </div>
-
-            {slide.cheatSheet && (
-              <table className="mt-8 w-full border-collapse text-left text-sm">
-                <caption className={cn(notesHeading, "mb-2 text-left")}>
-                  Antisèche : réponses simples aux questions propriétaires
-                </caption>
-                <thead>
-                  <tr className="border-b border-black/10 text-neutral-500">
-                    <th className="py-2 pr-6 font-medium">Capacité</th>
-                    <th className="py-2 pr-6 font-medium">Où ?</th>
-                    <th className="py-2 font-medium">À dire simplement</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {slide.cheatSheet.map((row, rowIndex) => (
-                    <tr key={row.capacity} className="border-b border-black/[0.06] align-top">
-                      <td className="whitespace-nowrap py-2 pr-6 text-neutral-800">
-                        {rowIndex + 1}. {row.capacity}
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-6 font-mono text-[12.5px] text-hk-700">{row.source}</td>
-                      <td className="py-2 leading-relaxed text-neutral-600">{frenchSpacing(row.say)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </aside>
       )}
 
       {/* preventDefault au mousedown : un clic ne prend pas le focus, Espace continue d'avancer. */}
@@ -439,11 +366,6 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
             className="max-sm:h-10 max-sm:w-10 max-sm:rounded-full max-sm:border max-sm:border-hk-500/25 max-sm:bg-hk-50 max-sm:px-0 max-sm:text-hk-700 max-sm:shadow-sm max-sm:[&_svg]:h-5 max-sm:[&_svg]:w-5"
           >
             <ChevronRight />
-          </ToolbarButton>
-          <ToolbarButton label="Notes orateur (N)" pressed={notesOpen} onClick={() => setNotesOpen((open) => !open)}>
-            <StickyNote />
-            <span className="hidden sm:inline">Notes</span>
-            <Shortcut>N</Shortcut>
           </ToolbarButton>
           <ToolbarButton label="Plein écran (F)" pressed={isFullscreen} onClick={() => void toggleFullscreen()}>
             {isFullscreen ? <Minimize /> : <Maximize />}

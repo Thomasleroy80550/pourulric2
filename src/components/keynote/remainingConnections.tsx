@@ -76,10 +76,4 @@ export const remainingConnectionsSlide: KeynoteSlide = {
     chips: ["Les avis", "Le ménage", "Les blocages", "La gestion des prix", "Les photos"],
     footnote: "Ce n’est pas un gros chantier. Mais c’est important de vous l’expliquer.",
   },
-  notes: [
-    "La migration a servi uniquement à migrer la connectivité. Aujourd’hui, tout fonctionne dans notre outil Cadence.",
-    "Ce qui reste, c’est la connexion de Cadence à votre espace propriétaire. Nous avons priorisé cinq blocs : les avis, le ménage, les blocages, la gestion des prix et la gestion des photos des annonces.",
-    "Ce n’est pas un gros chantier, mais c’est important de vous l’expliquer : vous savez ce qui est déjà visible, ce qui reste à connecter, et dans quel ordre nous avançons.",
-  ],
-  transition: "C’est cette connexion qui complète votre espace.",
 };

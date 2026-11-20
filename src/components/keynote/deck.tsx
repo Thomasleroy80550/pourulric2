@@ -1011,13 +1011,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       chips: ["Votre location, en toute confiance"],
       align: "center",
     },
-    notes: [
-      "Bonjour à toutes et à tous. Vous confiez votre logement à Hello Keys. Vous voulez savoir ce qui s’y passe, sans avoir à appeler, ni à attendre un relevé. C’est exactement le sujet de cette présentation.",
-      "Hello Keys a développé Cadence, sa plateforme interne de gestion locative. Cadence orchestre les annonces, les réservations, les messages, les cautions et les reversements. Elle travaille en arrière-plan pour l’équipe Hello Keys, et elle alimente votre espace propriétaire.",
-      "Aujourd’hui, nous allons vous montrer ce que cela change concrètement pour vous : une gestion plus rapide, des preuves visibles et une information disponible sans intermédiaire.",
-      "Cadence, par Hello Keys. Votre location, en toute confiance.",
-    ],
-    transition: "Avant de montrer la solution, partons de ce que vous pouviez vivre jusqu’ici.",
   },
   {
     id: "constat",
@@ -1034,13 +1027,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       figure: { value: "1 / mois", caption: "le rythme habituel du relevé de revenus" },
     },
-    notes: [
-      "Avant, la relation passait souvent par une question. Est-ce que mon logement est loué ? Le ménage est-il vraiment terminé ? Quand mon reversement partira-t-il ? Combien mon bien a-t-il généré ce mois-ci ?",
-      "Ces questions sont normales. Vous confiez un bien important. Mais lorsque la réponse dépend d’un appel, d’un message ou d’un relevé mensuel, l’information arrive trop tard. Vous attendez. L’équipe cherche. Puis elle vous répond.",
-      "Le problème n’est pas un manque de confiance. C’est un manque d’accès direct à l’information. Nous avons donc construit une réponse simple : remplacer la demande par l’affichage, et la déclaration par la preuve.",
-      "C’est précisément pour cela que Hello Keys a développé Cadence.",
-    ],
-    transition: "Voici maintenant la plateforme qui porte cette ambition.",
   },
   {
     id: "cadence",
@@ -1057,13 +1043,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       footnote: "Moins d’attente, plus de visibilité, davantage de contrôle.",
     },
-    notes: [
-      "Cadence est la plateforme développée par Hello Keys. Elle n’est pas figée : elle est enrichie en continu, à partir des besoins de gestion et des retours du terrain.",
-      "Vous n’avez pas besoin de connaître la mécanique interne. Ce qu’il faut retenir est simple : Cadence relie votre espace propriétaire aux plateformes de réservation, aux paiements et aux outils de tarification.",
-      "Cette base permet deux choses. D’un côté, Hello Keys automatise les tâches répétitives. De l’autre, vous recevez une information plus claire et vous pouvez agir vous-même sur de plus en plus de sujets.",
-      "Le résultat pour vous : moins d’attente, plus de visibilité, et davantage de contrôle sur votre location.",
-    ],
-    transition: "Commençons par un cas très concret : une période creuse à remplir.",
   },
   {
     id: "promotion",
@@ -1080,13 +1059,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       chips: ["Booking.com", "Airbnb", "Expedia", "Vrbo", "Marriott"],
     },
-    notes: [
-      "Quand une période creuse apparaît, vous pouvez agir immédiatement. Depuis votre espace, vous ouvrez Promotions, vous choisissez le canal, le type d’offre et la remise, puis vous publiez. Vous n’avez pas besoin d’attendre une validation de Hello Keys.",
-      "Cinq canaux sont disponibles : Booking.com, Airbnb, Expedia, Vrbo et Marriott. Les types d’offre proposés correspondent aux règles réelles de chaque plateforme : dernière minute, réservation anticipée, dates de séjour.",
-      "Une fois validée, l’offre est envoyée aux plateformes concernées. Vous n’avez rien à recopier d’un site à l’autre. Vous pouvez ensuite la modifier, l’activer ou la mettre en pause.",
-      "L’avantage est simple : vous réagissez au bon moment, même un dimanche soir, et vous gardez la main sur votre stratégie commerciale.",
-    ],
-    transition: "Une offre attire le regard. Mais ce que le voyageur voit d’abord, c’est votre première photo.",
   },
   {
     id: "photos",
@@ -1102,13 +1074,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       footnote: "Cadence sait déjà gérer les photos. La connexion à votre espace est la prochaine étape.",
     },
-    notes: [
-      "Cadence sait déjà gérer les photos des annonces : voir les images, en ajouter, modifier leurs étiquettes et changer leur ordre.",
-      "La première photo est choisie en un clic. Les autres se réorganisent par glisser-déposer. Vous pouvez indiquer ce que montre chaque image : chambre, salle de bain, vue, cuisine.",
-      "Ce qui reste à faire, c’est la connexion de cette gestion à votre espace propriétaire. L’objectif est simple : vous pourrez préparer votre sélection, et vos choix seront répercutés sur les annonces.",
-      "L’avantage est direct : votre annonce restera à jour, plus claire et plus attractive, sans échange ni délai.",
-    ],
-    transition: "L’annonce est belle et visible. Le voyageur écrit maintenant : il faut répondre vite et au bon endroit.",
   },
   {
     id: "messages",
@@ -1124,13 +1089,6 @@ export const keynoteSlides: KeynoteSlide[] = [
         "Configuration vérifiée chaque jour : aucun message perdu",
       ],
     },
-    notes: [
-      "Les voyageurs écrivent depuis plusieurs plateformes. Cadence rassemble leurs conversations dans une seule boîte de réception : dernier message, messages non lus, historique complet et réponse envoyée sur le bon canal.",
-      "Des messages automatiques peuvent aussi être déclenchés pendant le séjour, par exemple lorsqu’une réservation est créée, modifiée ou annulée. L’équipe Hello Keys garde donc une vue claire de la relation voyageur.",
-      "Cadence vérifie aussi chaque jour que la configuration est complète, pour éviter qu’un message soit accepté par une plateforme sans être réellement transmis.",
-      "L’avantage pour vous : les voyageurs sont mieux suivis, les réponses sont plus fluides et le risque de message perdu diminue.",
-    ],
-    transition: "Cette réactivité fonctionne aussi à plus grande échelle, lorsqu’il faut diffuser un logement sur plusieurs canaux.",
   },
   {
     id: "diffusion",
@@ -1146,13 +1104,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       footnote: "Votre logement est diffusé plus vite, avec moins de manipulations.",
     },
-    notes: [
-      "Mettre un logement en ligne sur plusieurs plateformes peut vite devenir répétitif. Cadence permet d’activer Airbnb, Booking et Abritel ensemble.",
-      "Ensuite, le statut de diffusion est suivi automatiquement. Le résultat arrive en quelques minutes, environ trois minutes observées en pratique.",
-      "Si une plateforme refuse une annonce, la raison est expliquée clairement. L’équipe sait ainsi quoi corriger, sans chercher à décoder un message technique.",
-      "L’avantage pour vous : votre logement est diffusé plus vite, avec moins de manipulations et une meilleure visibilité sur l’état d’avancement.",
-    ],
-    transition: "Tout cela repose sur une machine discrète. Regardons ce qu’elle automatise, sans entrer dans la technique.",
   },
   {
     id: "architecture",
@@ -1169,14 +1120,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       footnote: "Connecté aux plateformes, à Stripe, à Beyond et à la tarification météo.",
     },
-    notes: [
-      "Cadence travaille en arrière-plan. Inutile de retenir la technique : imaginez de petits automates, chacun chargé d’une tâche précise.",
-      "Les nouvelles réservations sont relevées automatiquement. Les cautions sont traitées au bon moment. Les reversements partent à J+1 du départ. Les données sont sauvegardées chaque nuit.",
-      "Cadence est aussi connecté aux plateformes de réservation, à Stripe pour les paiements, à Beyond et à la tarification météo pour ajuster les prix.",
-      "L’avantage est concret : moins de tâches manuelles, des actions lancées au bon moment, et une information à jour dans votre espace propriétaire.",
-      "La machine avance, même lorsque vous ne la regardez pas.",
-    ],
-    transition: "Avant d’ouvrir votre espace propriétaire, regardons ce que représente réellement cette plateforme.",
   },
   ...investmentSlides,
   {
@@ -1189,12 +1132,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       lead: "Vous n’appelez plus pour demander une nouvelle : elle est déjà là.",
       align: "center",
     },
-    notes: [
-      "Jusqu’ici, nous avons vu comment Cadence aide Hello Keys à mieux gérer : promotions, photos, messages et diffusion. Mais la gestion efficace ne suffit pas. Vous devez aussi pouvoir suivre ce qui se passe, sans dépendre d’un appel ou d’un message.",
-      "C’est le rôle de votre espace propriétaire. Il vous donne accès aux informations de vos logements, et uniquement à celles-ci.",
-      "Le principe est simple : Cadence gère, vous voyez. Vous n’appelez plus pour demander une nouvelle : elle est déjà là.",
-    ],
-    transition: "Voici ce qui est disponible dans votre espace, et ce qui reste à connecter.",
   },
   {
     id: "espace-proprietaire",
@@ -1211,50 +1148,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       footnote: "La transparence n’est plus une promesse : elle est affichée.",
     },
-    notes: [
-      "Votre espace propriétaire vous donne déjà accès aux réservations, aux alertes et au reversement. C’est la première étape de la transparence.",
-      "Les autres blocs sont connectés progressivement. Nous avons priorisé les avis, le ménage, les blocages, la gestion des prix et la gestion des photos des annonces.",
-      "L’objectif n’est pas de vous montrer de la technique. L’objectif est de vous éviter des questions : vous savez ce qui est réservé, ce qui est fait et ce qui vous sera versé.",
-      "La transparence n’est plus une promesse : elle est affichée.",
-    ],
-    transition: "Avant de parler argent, voyons ce qui est déjà disponible et ce qui reste à connecter.",
-    cheatSheet: [
-      {
-        capacity: "Réservations",
-        source: "Disponible",
-        say: "Dates, statut, canal, référence et montant du séjour. Ni coordonnées voyageurs, ni données de paiement.",
-      },
-      {
-        capacity: "Gestion des prix",
-        source: "À connecter",
-        say: "La gestion des prix et des disponibilités fait partie des blocs priorisés.",
-      },
-      {
-        capacity: "Blocages",
-        source: "À connecter",
-        say: "Les dates personnelles pourront être bloquées depuis votre espace, avec ou sans demande de ménage.",
-      },
-      {
-        capacity: "Ménage",
-        source: "À connecter",
-        say: "Les interventions et les photos avant / après feront partie des blocs priorisés.",
-      },
-      {
-        capacity: "Avis",
-        source: "À connecter",
-        say: "Tous les avis voyageurs seront consultables depuis votre espace.",
-      },
-      {
-        capacity: "Alertes",
-        source: "Disponible",
-        say: "Vous êtes informé à chaque réservation, modification ou annulation.",
-      },
-      {
-        capacity: "Paiement",
-        source: "Disponible",
-        say: "Le reversement part automatiquement à J+1 du départ, détaillé sur la slide suivante.",
-      },
-    ],
   },
   {
     id: "argent",
@@ -1270,14 +1163,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       figure: { value: "0 €", caption: "de commission cachée" },
     },
-    notes: [
-      "Parlons d’argent, car c’est là que la confiance se gagne ou se perd.",
-      "Le lendemain du départ du voyageur, votre reversement part automatiquement. Cadence vérifie régulièrement les séjours arrivés à J+1, puis lance le virement.",
-      "Le montant est simple à lire : le total réellement encaissé, moins uniquement les frais Stripe réels. Zéro commission de gestion. Les cautions sont exclues du calcul.",
-      "Un même virement ne peut pas partir deux fois. Et en cas de litige, de remboursement ou d’annulation, le reversement se bloque automatiquement.",
-      "Zéro euro de commission cachée.",
-    ],
-    transition: "Une telle visibilité n’a de valeur que si les accès sont strictement protégés.",
   },
   {
     id: "confiance",
@@ -1293,13 +1178,6 @@ export const keynoteSlides: KeynoteSlide[] = [
       ],
       figure: { value: "0", caption: "coordonnée voyageur exposée au propriétaire" },
     },
-    notes: [
-      "Tout montrer ne veut pas dire tout exposer. Vous voyez les informations de vos logements, et uniquement celles-ci.",
-      "Les accès peuvent être révoqués si nécessaire. Les actions sensibles sont réservées au titulaire du compte. Les liens des photos de ménage expirent après cinq minutes.",
-      "Pour les paiements, l’identité et les coordonnées bancaires sont vérifiées par Stripe. Le bénéficiaire est figé au moment du paiement.",
-      "Et surtout : zéro coordonnée voyageur n’est exposée au propriétaire. Vous avez la visibilité, sans compromettre la confidentialité.",
-    ],
-    transition: "Avant de conclure, regardons précisément ce qui reste à connecter à votre espace.",
   },
   remainingConnectionsSlide,
   {
@@ -1314,13 +1192,5 @@ export const keynoteSlides: KeynoteSlide[] = [
       signature: { thanks: "Merci à tous pour votre confiance", names: ["Thomas", "Fiona", "Mathilde"] },
       align: "center",
     },
-    notes: [
-      "Revenons à vos questions de départ. Est-ce loué ? Vous le voyez. Quand part votre reversement ? À J+1 du départ. Une réservation change ? Vous êtes alerté.",
-      "Pendant ce temps, Cadence fait déjà fonctionner les opérations : promotions, photos, messages, diffusion, cautions, reversements et sauvegardes. La prochaine étape est de connecter les blocs prioritaires à votre espace.",
-      "C’est cela que nous avons voulu construire : une gestion plus réactive côté Hello Keys, et une information plus claire côté propriétaire. Vous savez ce qui est disponible, et ce qui arrive.",
-      "Hello Keys gère avec Cadence. Vous voyez l’essentiel, et la suite se connecte.",
-      "La confiance n’est plus déclarée : elle est affichée. Merci à tous pour votre confiance — Thomas, Fiona et Mathilde.",
-    ],
-    transition: "Fin de la keynote. Laisser le slogan à l’écran pendant les questions.",
   },
 ];

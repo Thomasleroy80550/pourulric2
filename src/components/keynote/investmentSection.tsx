@@ -303,12 +303,6 @@ export const investmentSlides: KeynoteSlide[] = [
       chips: ["Du temps", "De l’argent", "De l’expertise"],
       align: "center",
     },
-    notes: [
-      "Nous avons fait un choix simple : construire l’outil que nous aurions voulu vous donner en tant que propriétaires.",
-      "Cette section n’est pas là pour expliquer une recette. Elle est là pour montrer l’engagement de Hello Keys : du temps, de l’argent et de l’expertise, investis pour vous donner plus de visibilité et plus d’autonomie.",
-      "Le message à faire sentir est chaleureux : cet outil existe parce que vos questions méritaient de vraies réponses.",
-    ],
-    transition: "Voici ce que nous avons construit pour vous.",
   },
   {
     id: "investissement-construction",
@@ -326,11 +320,6 @@ export const investmentSlides: KeynoteSlide[] = [
       ],
       footnote: "Un outil construit sur mesure, par une conciergerie, pour des propriétaires.",
     },
-    notes: [
-      "Ce n’est pas un logiciel acheté sur étagère. C’est un outil construit sur mesure, par une conciergerie, pour des propriétaires. Et il grandit chaque semaine.",
-      "L’objectif n’est pas d’impressionner avec la technique. L’objectif est de montrer que Hello Keys a construit une base durable, pensée pour répondre à vos besoins réels.",
-    ],
-    transition: "Cette construction représente un investissement réel.",
   },
   {
     id: "investissement-moyens",
@@ -346,12 +335,6 @@ export const investmentSlides: KeynoteSlide[] = [
       ],
       footnote: "Équivalent en développement classique : 250 000 – 400 000 € (estimation).",
     },
-    notes: [
-      "Nous aurions pu acheter un logiciel existant. Nous avons choisi d’investir pour en construire un meilleur — parce que vos questions de propriétaires méritaient des réponses qu’aucun logiciel du marché ne donne.",
-      "Si la question vient sur la méthode, la réponse est simple : une équipe d’experts augmentée par les meilleures IA du marché. Point.",
-      "Ce qui compte ici, c’est l’engagement : des moyens réels, concentrés sur un outil utile à vos logements.",
-    ],
-    transition: "Voici ce que cet investissement change dans votre quotidien.",
   },
   {
     id: "investissement-benefices",
@@ -368,12 +351,6 @@ export const investmentSlides: KeynoteSlide[] = [
       ],
       footnote: "Le retour sur investissement, c’est le vôtre.",
     },
-    notes: [
-      "Chaque euro et chaque heure investis tiennent dans cette liste. C’est ça, le retour sur investissement : le vôtre.",
-      "Aujourd’hui, vous voyez déjà vos réservations, vos alertes et vos reversements. Les autres blocs — ménage, avis et dates personnelles — sont priorisés pour la connexion à votre espace.",
-      "C’est là que l’investissement devient concret : il rend ces capacités possibles, puis les amène vers vous.",
-    ],
-    transition: "Et ce n’est pas fini.",
   },
   {
     id: "investissement-cloture",
@@ -386,10 +363,5 @@ export const investmentSlides: KeynoteSlide[] = [
       chips: ["Bienvenue dans votre espace propriétaire"],
       align: "center",
     },
-    notes: [
-      "Terminer sur l’invitation : distribution ou envoi des accès juste après la présentation.",
-      "Le ton doit rester simple : Hello Keys continue d’investir, et vous bénéficiez directement de chaque amélioration.",
-    ],
-    transition: "Revenons maintenant à ce que vous voyez dans votre espace propriétaire.",
   },
 ];

@@ -1,11 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
 
-export interface KeynoteCheatSheetRow {
-  capacity: string;
-  source: string;
-  say: string;
-}
-
 /** Contenu de la version mobile : une mise en page native portrait, pensée slide par slide. */
 export interface KeynoteMobileSlide {
   kicker: string;
@@ -24,7 +18,4 @@ export interface KeynoteSlide {
   label: string;
   Component: ComponentType;
   mobile: KeynoteMobileSlide;
-  notes: string[];
-  transition: string;
-  cheatSheet?: KeynoteCheatSheetRow[];
 }

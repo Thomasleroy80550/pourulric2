@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Maximize, Minimize, StickyNote, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Maximize, Minimize, StickyNote, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { keynoteSlides as slides } from "./deck";
+import { Glow } from "./kit";
 import { MobileSlide } from "./mobileSlide";
 
 const STAGE_WIDTH = 1280;
@@ -109,6 +110,9 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
   const nextSlide = slides[index + 1];
   const Slide = slide.Component;
 
+  // Écran d'accueil : un lien direct vers une slide (?slide=N) saute l'opener.
+  const [started, setStarted] = useState(() => index !== 0);
+
   const goTo = (target: number) => {
     const next = Math.min(Math.max(target, 0), slides.length - 1);
     if (next === index) return;
@@ -133,13 +137,14 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
 
   // La scène garde ses 1280 × 720 et se met à l'échelle de l'espace disponible.
   useLayoutEffect(() => {
-    const host = hostRef.current!;
+    const host = hostRef.current;
+    if (!host) return;
     const fit = () => setScale(Math.min(host.clientWidth / STAGE_WIDTH, host.clientHeight / STAGE_HEIGHT));
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(host);
     return () => observer.disconnect();
-  }, []);
+  }, [started]);
 
   // L'indication tactile disparaît dès la première navigation.
   useEffect(() => {
@@ -177,6 +182,15 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
       const target = event.target as HTMLElement;
       // Une fenêtre modale ou un champ de saisie garde son clavier.
       if (target.closest('[role="dialog"], input, textarea, select')) return;
+
+      // Sur l'écran d'accueil, les touches d'avancement lancent la présentation.
+      if (!started) {
+        if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(event.key)) {
+          event.preventDefault();
+          setStarted(true);
+        }
+        return;
+      }
 
       switch (event.key) {
         case "ArrowRight":
@@ -227,6 +241,42 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
           "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, ui-sans-serif, system-ui, sans-serif",
       }}
     >
+      {!started ? (
+        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-6">
+          <Glow className="left-1/2 top-1/2 h-[620px] w-[920px] -translate-x-1/2 -translate-y-1/2" />
+          <div className="relative flex max-w-2xl animate-in flex-col items-center text-center fade-in zoom-in-95 duration-700 motion-reduce:animate-none">
+            <p className="flex items-center gap-3 text-[13px] font-semibold uppercase tracking-[0.3em] text-hk-600">
+              <span aria-hidden className="h-px w-8 bg-hk-300" />
+              Hello Keys présente
+              <span aria-hidden className="h-px w-8 bg-hk-300" />
+            </p>
+            <h1 className="mt-6 bg-gradient-to-b from-neutral-950 via-neutral-800 to-hk-600 bg-clip-text text-[72px] font-semibold leading-none tracking-[-0.055em] text-transparent md:text-[104px]">
+              Cadence
+            </h1>
+            <p className="mt-4 text-[19px] font-medium text-neutral-500 md:text-[22px]">
+              Votre location, en toute confiance.
+            </p>
+            <button
+              type="button"
+              onClick={() => setStarted(true)}
+              className="group mt-10 inline-flex items-center gap-2.5 rounded-full bg-hk-500 px-8 py-4 text-lg font-semibold text-white shadow-[0_18px_45px_rgba(0,113,227,0.25)] transition hover:bg-hk-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hk-500 focus-visible:ring-offset-2"
+            >
+              Découvrir la keynote
+              <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" aria-hidden />
+            </button>
+            <p className="mt-6 text-sm text-neutral-400">
+              {slides.length} slides · ~10 minutes
+            </p>
+            <p className="mt-2 hidden text-xs text-neutral-400 md:block">
+              Astuce : ← → pour naviguer, N pour les notes orateur
+            </p>
+            <p className="mt-2 text-xs text-neutral-400 md:hidden">Glissez ou utilisez les flèches pour naviguer</p>
+            <p className="mt-10 text-[11px] font-semibold uppercase tracking-[0.24em] text-neutral-300">
+              Cadence · par Hello Keys
+            </p>
+          </div>
+        </div>
+      ) : (
       <div
         ref={hostRef}
         className="relative min-h-0 flex-1 overflow-hidden"
@@ -270,15 +320,16 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
           />
         </div>
       </div>
+      )}
 
-      {hintVisible && (
+      {started && hintVisible && (
         <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/85 px-3 py-1.5 text-xs font-medium text-neutral-500 shadow-sm backdrop-blur-xl md:hidden">
           Glissez ou utilisez les flèches
         </div>
       )}
 
       {/* Grandes flèches latérales : ordinateur uniquement, pour ne jamais couvrir le texte sur mobile. */}
-      {!notesOpen && (
+      {started && !notesOpen && (
         <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 hidden items-center px-3 md:flex sm:px-5">
           <NavigationArrow direction="previous" disabled={index === 0} onClick={() => goTo(index - 1)} />
           <NavigationArrow
@@ -351,6 +402,7 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
       )}
 
       {/* preventDefault au mousedown : un clic ne prend pas le focus, Espace continue d'avancer. */}
+      {started && (
       <div
         onMouseDown={(event) => event.preventDefault()}
         className={cn(
@@ -400,6 +452,7 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
           </ToolbarButton>
         </div>
       </div>
+      )}
     </div>
   );
 }

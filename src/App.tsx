@@ -188,7 +188,8 @@ function App() {
     publicStandalonePath === '/embed/avis' ||
     publicStandalonePath === '/preview/digicode' ||
     publicStandalonePath === '/halloween' ||
-    publicStandalonePath === '/keynote'
+    publicStandalonePath === '/keynote' ||
+    publicStandalonePath === '/admin/keynote'
   ) {
     return (
       <BrowserRouter>
@@ -199,6 +200,7 @@ function App() {
           <Route path="/preview/digicode" element={<PinPreview />} />
           <Route path="/halloween" element={<Index />} />
           <Route path="/keynote" element={<KeynotePage />} />
+          <Route path="/admin/keynote" element={<KeynotePage />} />
         </Routes>
       </BrowserRouter>
     );

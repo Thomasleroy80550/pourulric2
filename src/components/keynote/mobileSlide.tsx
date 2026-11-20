@@ -11,14 +11,11 @@ export function MobileSlide({ content }: { content: KeynoteMobileSlide }) {
   const centered = content.align === "center";
 
   return (
-    <section
-      className={cn(
-        "relative isolate flex h-full flex-col overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f5f5f7_55%)] px-7 pb-7 pt-11",
-        centered && "items-center text-center",
-      )}
-    >
+    <section className="relative isolate flex h-full flex-col overflow-hidden bg-[linear-gradient(180deg,#ffffff_0%,#f5f5f7_55%)] px-7 pb-7 pt-8">
       <Glow className="left-1/2 top-[-160px] h-[380px] w-[560px] -translate-x-1/2" />
 
+      {/* Le contenu est centré verticalement dans l'espace disponible. */}
+      <div className={cn("flex min-h-0 w-full flex-1 flex-col justify-center", centered && "items-center text-center")}>
       <Reveal>
         <p className="flex items-center gap-2.5 text-[12px] font-semibold uppercase tracking-[0.24em] text-hk-600">
           <span aria-hidden className="h-px w-6 bg-hk-300" />
@@ -112,14 +109,15 @@ export function MobileSlide({ content }: { content: KeynoteMobileSlide }) {
           </div>
         </Reveal>
       )}
+      </div>
 
-      <div className={cn("mt-auto pt-6", centered && "flex flex-col items-center")}>
+      <div className={cn("pt-5", centered && "flex flex-col items-center")}>
         {content.footnote && (
           <Reveal delay={950}>
             <p className="text-[12px] leading-snug text-neutral-400">{content.footnote}</p>
           </Reveal>
         )}
-        <p className="mt-3 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-neutral-300">
+        <p className="mt-2.5 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-neutral-300">
           Cadence · par Hello Keys
         </p>
       </div>

@@ -46,7 +46,7 @@ import { cn } from "@/lib/utils";
 
 function FlowArrow({ label, delay = 0 }: { label?: string; delay?: number }) {
   return (
-    <Reveal delay={delay} className="keynote-flow-arrow flex flex-col items-center gap-2 text-hk-600">
+    <Reveal delay={delay} className="flex flex-col items-center gap-2 text-hk-600">
       <ArrowRight className="h-8 w-8" aria-hidden />
       {label && <span className="font-mono text-[11px] uppercase tracking-[0.18em]">{label}</span>}
     </Reveal>
@@ -340,7 +340,7 @@ function PhotosSlide() {
           ]}
         />
         <div className="flex min-w-0 flex-col justify-center">
-          <div className="keynote-flow flex items-center justify-center gap-5">
+          <div className="flex items-center justify-center gap-5">
             <PhotoGrid title="Dans Cadence" delay={450} editable />
             <FlowArrow label="Connexion" delay={850} />
             <PhotoGrid title="Votre espace" delay={1050} pending />
@@ -770,7 +770,7 @@ function OwnerPortalSlide() {
       </div>
       <div className="mt-6 grid grid-cols-[1fr_auto] items-end gap-8">
         <Reveal delay={1250}>
-          <div className="keynote-flow flex items-start gap-10">
+          <div className="flex items-start gap-10">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Déjà dans votre espace</p>
               <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">
@@ -1013,6 +1013,13 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "ouverture",
     label: "Ouverture",
     Component: OpeningSlide,
+    mobile: {
+      kicker: "Hello Keys présente",
+      title: "Cadence",
+      lead: "La plateforme développée par Hello Keys pour que vous sachiez tout, sans rien demander.",
+      chips: ["Votre location, en toute confiance"],
+      align: "center",
+    },
     notes: [
       "Bonjour à toutes et à tous. Vous confiez votre logement à Hello Keys. Vous voulez savoir ce qui s’y passe, sans avoir à appeler, ni à attendre un relevé. C’est exactement le sujet de cette présentation.",
       "Hello Keys a développé Cadence, sa plateforme interne de gestion locative. Cadence orchestre les annonces, les réservations, les messages, les cautions et les reversements. Elle travaille en arrière-plan pour l’équipe Hello Keys, et elle alimente votre espace propriétaire.",
@@ -1025,6 +1032,17 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "constat",
     label: "Le constat propriétaire",
     Component: ProblemSlide,
+    mobile: {
+      kicker: "Le constat",
+      title: "Avant, il fallait demander pour savoir.",
+      bullets: [
+        "Est-ce que mon logement est loué ?",
+        "Le ménage est-il vraiment terminé ?",
+        "Quand part mon reversement ?",
+        "Combien mon bien a-t-il généré ce mois-ci ?",
+      ],
+      figure: { value: "1 / mois", caption: "le rythme habituel du relevé de revenus" },
+    },
     notes: [
       "Avant, la relation passait souvent par une question. Est-ce que mon logement est loué ? Le ménage est-il vraiment terminé ? Quand mon reversement partira-t-il ? Combien mon bien a-t-il généré ce mois-ci ?",
       "Ces questions sont normales. Vous confiez un bien important. Mais lorsque la réponse dépend d’un appel, d’un message ou d’un relevé mensuel, l’information arrive trop tard. Vous attendez. L’équipe cherche. Puis elle vous répond.",
@@ -1037,6 +1055,17 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "cadence",
     label: "Cadence par Hello Keys",
     Component: PromiseSlide,
+    mobile: {
+      kicker: "La réponse Hello Keys",
+      title: "Cadence relie tout, pour vous.",
+      lead: "Votre espace propriétaire est relié aux plateformes de réservation, aux paiements et aux outils de tarification.",
+      bullets: [
+        "Hello Keys automatise les tâches répétitives",
+        "Vous recevez une information plus claire",
+        "Vous agissez vous-même sur de plus en plus de sujets",
+      ],
+      footnote: "Moins d’attente, plus de visibilité, davantage de contrôle.",
+    },
     notes: [
       "Cadence est la plateforme développée par Hello Keys. Elle n’est pas figée : elle est enrichie en continu, à partir des besoins de gestion et des retours du terrain.",
       "Vous n’avez pas besoin de connaître la mécanique interne. Ce qu’il faut retenir est simple : Cadence relie votre espace propriétaire aux plateformes de réservation, aux paiements et aux outils de tarification.",
@@ -1049,6 +1078,17 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "promotion",
     label: "Promotion rapide",
     Component: PromotionSlide,
+    mobile: {
+      kicker: "Autonomie",
+      title: "Une période creuse ? Publiez une offre en quelques minutes.",
+      lead: "Depuis votre espace, rubrique Promotions — sans attendre une validation de Hello Keys.",
+      bullets: [
+        "Choisissez le canal, le type d’offre et la remise",
+        "L’offre est envoyée aux plateformes, rien à recopier",
+        "Modifiez, activez ou mettez en pause à tout moment",
+      ],
+      chips: ["Booking.com", "Airbnb", "Expedia", "Vrbo", "Marriott"],
+    },
     notes: [
       "Quand une période creuse apparaît, vous pouvez agir immédiatement. Depuis votre espace, vous ouvrez Promotions, vous choisissez le canal, le type d’offre et la remise, puis vous publiez. Vous n’avez pas besoin d’attendre une validation de Hello Keys.",
       "Cinq canaux sont disponibles : Booking.com, Airbnb, Expedia, Vrbo et Marriott. Les types d’offre proposés correspondent aux règles réelles de chaque plateforme : dernière minute, réservation anticipée, dates de séjour.",
@@ -1061,6 +1101,16 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "photos",
     label: "Photos des annonces",
     Component: PhotosSlide,
+    mobile: {
+      kicker: "À connecter",
+      title: "Vos photos, bientôt entre vos mains.",
+      bullets: [
+        "Voir toutes les photos de votre logement",
+        "Ajouter, étiqueter, réordonner par glisser-déposer",
+        "Vos choix répercutés sur les annonces",
+      ],
+      footnote: "Cadence sait déjà gérer les photos. La connexion à votre espace est la prochaine étape.",
+    },
     notes: [
       "Cadence sait déjà gérer les photos des annonces : voir les images, en ajouter, modifier leurs étiquettes et changer leur ordre.",
       "La première photo est choisie en un clic. Les autres se réorganisent par glisser-déposer. Vous pouvez indiquer ce que montre chaque image : chambre, salle de bain, vue, cuisine.",
@@ -1073,6 +1123,16 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "messages",
     label: "Messages voyageurs",
     Component: MessagesSlide,
+    mobile: {
+      kicker: "Messages voyageurs",
+      title: "Chaque voyageur reçoit une réponse, au bon endroit.",
+      lead: "Toutes les conversations sont rassemblées dans une seule boîte de réception.",
+      bullets: [
+        "Dernier message, non lus, historique complet",
+        "Messages automatiques à chaque étape clé du séjour",
+        "Configuration vérifiée chaque jour : aucun message perdu",
+      ],
+    },
     notes: [
       "Les voyageurs écrivent depuis plusieurs plateformes. Cadence rassemble leurs conversations dans une seule boîte de réception : dernier message, messages non lus, historique complet et réponse envoyée sur le bon canal.",
       "Des messages automatiques peuvent aussi être déclenchés pendant le séjour, par exemple lorsqu’une réservation est créée, modifiée ou annulée. L’équipe Hello Keys garde donc une vue claire de la relation voyageur.",
@@ -1085,6 +1145,16 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "diffusion",
     label: "Diffusion multi-canal",
     Component: MultichannelSlide,
+    mobile: {
+      kicker: "Diffusion",
+      title: "Votre logement diffusé sur plusieurs canaux, en une fois.",
+      bullets: [
+        "Airbnb, Booking et Abritel activés ensemble",
+        "Statut suivi automatiquement, verdict en ~3 minutes",
+        "Si un canal refuse, la raison est expliquée clairement",
+      ],
+      footnote: "Votre logement est diffusé plus vite, avec moins de manipulations.",
+    },
     notes: [
       "Mettre un logement en ligne sur plusieurs plateformes peut vite devenir répétitif. Cadence permet d’activer Airbnb, Booking et Abritel ensemble.",
       "Ensuite, le statut de diffusion est suivi automatiquement. Le verdict arrive en quelques minutes, avec un délai observé d’environ trois minutes.",
@@ -1097,6 +1167,17 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "architecture",
     label: "Sous le capot",
     Component: ArchitectureSlide,
+    mobile: {
+      kicker: "En arrière-plan",
+      title: "Une machine discrète travaille pour vous.",
+      bullets: [
+        "Réservations relevées automatiquement",
+        "Cautions traitées au bon moment",
+        "Reversements à J+1 du départ",
+        "Données sauvegardées chaque nuit",
+      ],
+      footnote: "Connecté aux plateformes, à Stripe, à Beyond et à la tarification météo.",
+    },
     notes: [
       "Cadence travaille en arrière-plan. Inutile de retenir la technique : imaginez de petits automates, chacun chargé d’une tâche précise.",
       "Les nouvelles réservations sont relevées automatiquement. Les cautions sont traitées au bon moment. Les reversements partent à J+1 du départ. Les données sont sauvegardées chaque nuit.",
@@ -1111,6 +1192,12 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "transition",
     label: "Vous voyez",
     Component: TransitionSlide,
+    mobile: {
+      kicker: "Votre espace propriétaire",
+      title: "Cadence gère. Vous voyez.",
+      lead: "Vous n’appelez plus pour demander une nouvelle : elle est déjà là.",
+      align: "center",
+    },
     notes: [
       "Jusqu’ici, nous avons vu comment Cadence aide Hello Keys à mieux gérer : promotions, photos, messages et diffusion. Mais la gestion efficace ne suffit pas. Vous devez aussi pouvoir suivre ce qui se passe, sans dépendre d’un appel ou d’un message.",
       "C’est le rôle de votre espace propriétaire. Il vous donne accès aux informations de vos logements, et uniquement à celles-ci.",
@@ -1122,6 +1209,17 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "espace-proprietaire",
     label: "Espace propriétaire",
     Component: OwnerPortalSlide,
+    mobile: {
+      kicker: "Votre espace propriétaire",
+      title: "Ce que vous voyez aujourd’hui. Et demain.",
+      bullets: [
+        "Réservations : dates, statut, canal, montant",
+        "Alertes à chaque réservation, modification ou annulation",
+        "Reversement automatique à J+1 du départ",
+        "À connecter : avis, ménage, blocages, prix, photos",
+      ],
+      footnote: "La transparence n’est plus une promesse : elle est affichée.",
+    },
     notes: [
       "Votre espace propriétaire vous donne déjà accès aux réservations, aux alertes et au reversement. C’est la première étape de la transparence.",
       "Les autres blocs sont connectés progressivement. Nous avons priorisé les avis, le ménage, les blocages, la gestion des prix et la gestion des photos des annonces.",
@@ -1171,6 +1269,16 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "argent",
     label: "Reversement propriétaire",
     Component: MoneySlide,
+    mobile: {
+      kicker: "L’argent",
+      title: "Votre reversement part à J+1, automatiquement.",
+      bullets: [
+        "Le total réellement encaissé, moins les seuls frais Stripe",
+        "Un même virement ne part jamais deux fois",
+        "Litige ou annulation : le reversement se bloque",
+      ],
+      figure: { value: "0 €", caption: "de commission cachée" },
+    },
     notes: [
       "Parlons d’argent, car c’est là que la confiance se gagne ou se perd.",
       "Le lendemain du départ du voyageur, votre reversement part automatiquement. Cadence vérifie régulièrement les séjours arrivés à J+1, puis lance le virement.",
@@ -1184,6 +1292,16 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "confiance",
     label: "Sécurité et confidentialité",
     Component: TrustSlide,
+    mobile: {
+      kicker: "La confiance",
+      title: "Vous voyez tout. Sans exposer les voyageurs.",
+      bullets: [
+        "Vous ne voyez que vos logements",
+        "Actions sensibles réservées au titulaire du compte",
+        "Accès révocables, banque vérifiée par Stripe",
+      ],
+      figure: { value: "0", caption: "coordonnée voyageur exposée au propriétaire" },
+    },
     notes: [
       "Tout montrer ne veut pas dire tout exposer. Vous voyez les informations de vos logements, et uniquement celles-ci.",
       "Les accès peuvent être révoqués si nécessaire. Les actions sensibles sont réservées au titulaire du compte. Les liens des photos de ménage expirent après cinq minutes.",
@@ -1197,6 +1315,14 @@ export const keynoteSlides: KeynoteSlide[] = [
     id: "conclusion",
     label: "Conclusion",
     Component: ClosingSlide,
+    mobile: {
+      kicker: "Merci",
+      title: "La confiance n’est plus déclarée : elle est affichée.",
+      lead: "Hello Keys gère avec Cadence. Vous voyez l’essentiel, et la suite se connecte.",
+      chips: ["< 5 min", "J+1", "0 €"],
+      signature: { thanks: "Merci à tous pour votre confiance", names: ["Thomas", "Fiona", "Mathilde"] },
+      align: "center",
+    },
     notes: [
       "Revenons à vos questions de départ. Est-ce loué ? Vous le voyez. Quand part votre reversement ? À J+1 du départ. Une réservation change ? Vous êtes alerté.",
       "Pendant ce temps, Cadence fait déjà fonctionner les opérations : promotions, photos, messages, diffusion, cautions, reversements et sauvegardes. La prochaine étape est de connecter les blocs prioritaires à votre espace.",

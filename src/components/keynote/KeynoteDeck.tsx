@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { keynoteSlides as slides } from "./deck";
+import { MobileSlide } from "./mobileSlide";
 
 const STAGE_WIDTH = 1280;
 const STAGE_HEIGHT = 720;
@@ -93,11 +94,8 @@ function NavigationArrow({
 export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
-  const mobileContentRef = useRef<HTMLDivElement>(null);
-  const mobileFitRef = useRef({ scale: 1, height: 0 });
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [scale, setScale] = useState(1);
-  const [mobileFit, setMobileFit] = useState({ scale: 1, height: 0 });
   const [notesOpen, setNotesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hintVisible, setHintVisible] = useState(true);
@@ -142,33 +140,6 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
     observer.observe(host);
     return () => observer.disconnect();
   }, []);
-
-  // Mobile : la slide est mesurée puis réduite juste assez pour tenir dans l'écran, sans scroll.
-  useLayoutEffect(() => {
-    if (!isMobile) return;
-    const host = hostRef.current;
-    const content = mobileContentRef.current;
-    if (!host || !content) return;
-
-    const fit = () => {
-      const naturalHeight = content.offsetHeight;
-      const available = host.clientHeight;
-      if (!naturalHeight || !available) return;
-      const nextScale = Math.min(1, available / naturalHeight);
-      const nextHeight = Math.round(naturalHeight * nextScale);
-      const previous = mobileFitRef.current;
-      if (Math.abs(previous.scale - nextScale) < 0.005 && Math.abs(previous.height - nextHeight) < 2) return;
-      const next = { scale: nextScale, height: nextHeight };
-      mobileFitRef.current = next;
-      setMobileFit(next);
-    };
-
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(host);
-    observer.observe(content);
-    return () => observer.disconnect();
-  }, [isMobile, index]);
 
   // L'indication tactile disparaît dès la première navigation.
   useEffect(() => {
@@ -263,24 +234,15 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
         onTouchEnd={handleTouchEnd}
       >
         {isMobile ? (
-          <div className="flex h-full w-full items-center justify-center overflow-hidden">
-            <div className="w-full" style={{ height: mobileFit.height || undefined }}>
-              <div
-                ref={mobileContentRef}
-                role="group"
-                aria-roledescription="slide"
-                aria-label={`Slide ${index + 1} sur ${slides.length} : ${slide.label}`}
-                className="keynote-stage w-full"
-                style={{
-                  transform: `scale(${mobileFit.scale})`,
-                  transformOrigin: "top center",
-                }}
-              >
-                {/* La clé rejoue les animations d'entrée à chaque changement de slide. */}
-                <div key={slide.id} className="animate-in fade-in duration-500 motion-reduce:animate-none">
-                  <Slide />
-                </div>
-              </div>
+          <div
+            role="group"
+            aria-roledescription="slide"
+            aria-label={`Slide ${index + 1} sur ${slides.length} : ${slide.label}`}
+            className="h-full w-full"
+          >
+            {/* La clé rejoue les animations d'entrée à chaque changement de slide. */}
+            <div key={slide.id} className="h-full animate-in fade-in duration-500 motion-reduce:animate-none">
+              <MobileSlide content={slide.mobile} />
             </div>
           </div>
         ) : (
@@ -288,7 +250,7 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
             role="group"
             aria-roledescription="slide"
             aria-label={`Slide ${index + 1} sur ${slides.length} : ${slide.label}`}
-            className="keynote-stage absolute left-1/2 top-1/2"
+            className="absolute left-1/2 top-1/2"
             style={{
               width: STAGE_WIDTH,
               height: STAGE_HEIGHT,

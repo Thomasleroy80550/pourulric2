@@ -69,6 +69,13 @@ export const remainingConnectionsSlide: KeynoteSlide = {
   id: "connexions-restantes",
   label: "Connexions restantes",
   Component: RemainingConnectionsSlide,
+  mobile: {
+    kicker: "La suite",
+    title: "Ce qu’il reste à connecter à votre espace.",
+    lead: "La migration a servi à migrer la connectivité. Aujourd’hui, tout fonctionne dans Cadence.",
+    chips: ["Les avis", "Le ménage", "Les blocages", "La gestion des prix", "Les photos"],
+    footnote: "Ce n’est pas un gros chantier. Mais c’est important de vous l’expliquer.",
+  },
   notes: [
     "La migration a servi uniquement à migrer la connectivité. Aujourd’hui, tout fonctionne dans notre outil Cadence.",
     "Ce qui reste, c’est la connexion de Cadence à votre espace propriétaire. Nous avons priorisé cinq blocs : les avis, le ménage, les blocages, la gestion des prix et la gestion des photos des annonces.",

@@ -296,6 +296,13 @@ export const investmentSlides: KeynoteSlide[] = [
     id: "investissement-ouverture",
     label: "Investissement · Ouverture",
     Component: InvestmentIntroSlide,
+    mobile: {
+      kicker: "Hello Keys · Pour vous",
+      title: "Hello Keys investit pour vous.",
+      lead: "Du temps, de l’argent, de l’expertise — pour que vous sachiez tout, sans rien demander.",
+      chips: ["Du temps", "De l’argent", "De l’expertise"],
+      align: "center",
+    },
     notes: [
       "Nous avons fait un choix simple : construire l’outil que nous aurions voulu vous donner en tant que propriétaires.",
       "Cette section n’est pas là pour expliquer une recette. Elle est là pour montrer l’engagement de Hello Keys : du temps, de l’argent et de l’expertise, investis pour vous donner plus de visibilité et plus d’autonomie.",
@@ -307,6 +314,18 @@ export const investmentSlides: KeynoteSlide[] = [
     id: "investissement-construction",
     label: "Investissement · Construction",
     Component: BuiltForYouSlide,
+    mobile: {
+      kicker: "Hello Keys investit pour vous",
+      title: "Ce que nous avons construit pour vous.",
+      bullets: [
+        "~105 000 lignes de code",
+        "86 modules serveur",
+        "5 canaux certifiés : Airbnb, Booking, Vrbo, Expedia, Marriott",
+        "936 versions livrées en 6 mois",
+        "Mises à jour quasi quotidiennes",
+      ],
+      footnote: "Un outil construit sur mesure, par une conciergerie, pour des propriétaires.",
+    },
     notes: [
       "Ce n’est pas un logiciel acheté sur étagère. C’est un outil construit sur mesure, par une conciergerie, pour des propriétaires. Et il grandit chaque semaine.",
       "L’objectif n’est pas d’impressionner avec la technique. L’objectif est de montrer que Hello Keys a construit une base durable, pensée pour répondre à vos besoins réels.",
@@ -317,6 +336,16 @@ export const investmentSlides: KeynoteSlide[] = [
     id: "investissement-moyens",
     label: "Investissement · Moyens",
     Component: InvestmentSlide,
+    mobile: {
+      kicker: "L’investissement",
+      title: "Nous avons mis les moyens.",
+      bullets: [
+        "Plus de 5 900 $ investis en intelligence artificielle de pointe",
+        "~160 heures d’ingénierie sur 6 mois",
+        "Chaque fonctionnalité testée avec les vraies plateformes",
+      ],
+      footnote: "Équivalent en développement classique : 250 000 – 400 000 € (estimation).",
+    },
     notes: [
       "Nous aurions pu acheter un logiciel existant. Nous avons choisi d’investir pour en construire un meilleur — parce que vos questions de propriétaires méritaient des réponses qu’aucun logiciel du marché ne donne.",
       "Si la question vient sur la méthode, la réponse est simple : une équipe d’experts augmentée par les meilleures IA du marché. Point.",
@@ -328,6 +357,17 @@ export const investmentSlides: KeynoteSlide[] = [
     id: "investissement-benefices",
     label: "Investissement · Bénéfices",
     Component: OwnerBenefitsSlide,
+    mobile: {
+      kicker: "Pour vous, concrètement",
+      title: "Ce que cet investissement rend possible.",
+      bullets: [
+        "Disponible : réservations en direct, sans nous appeler",
+        "Disponible : alertes à chaque réservation ou annulation",
+        "Disponible : revenus reversés à J+1 du départ",
+        "À connecter : ménage prouvé par photos, avis, dates personnelles",
+      ],
+      footnote: "Le retour sur investissement, c’est le vôtre.",
+    },
     notes: [
       "Chaque euro et chaque heure investis tiennent dans cette liste. C’est ça, le retour sur investissement : le vôtre.",
       "Aujourd’hui, vous voyez déjà vos réservations, vos alertes et vos reversements. Les autres blocs — ménage, avis et dates personnelles — sont priorisés pour la connexion à votre espace.",
@@ -339,6 +379,13 @@ export const investmentSlides: KeynoteSlide[] = [
     id: "investissement-cloture",
     label: "Investissement · Clôture",
     Component: InvestmentClosingSlide,
+    mobile: {
+      kicker: "Clôture",
+      title: "Et nous ne nous arrêtons pas là.",
+      lead: "Chaque semaine, l’outil gagne en capacités. Vous ne payez pas la technologie : vous en récoltez les fruits.",
+      chips: ["Bienvenue dans votre espace propriétaire"],
+      align: "center",
+    },
     notes: [
       "Terminer sur l’invitation : distribution ou envoi des accès juste après la présentation.",
       "Le ton doit rester simple : Hello Keys continue d’investir, et vous bénéficiez directement de chaque amélioration.",

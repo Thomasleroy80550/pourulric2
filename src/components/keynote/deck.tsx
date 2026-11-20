@@ -38,7 +38,7 @@ import {
   SlideHeader,
   Wordmark,
 } from "./kit";
-import { costSlides } from "./costSection";
+import { investmentSlides } from "./investmentSection";
 import type { KeynoteSlide } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -1051,7 +1051,7 @@ export const keynoteSlides: KeynoteSlide[] = [
     ],
     transition: "Avant d’ouvrir votre espace propriétaire, regardons ce que représente réellement cette plateforme.",
   },
-  ...costSlides,
+  ...investmentSlides,
   {
     id: "transition",
     label: "Vous voyez",

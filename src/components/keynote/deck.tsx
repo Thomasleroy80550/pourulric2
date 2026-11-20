@@ -41,6 +41,7 @@ import {
 } from "./kit";
 import { investmentSlides } from "./investmentSection";
 import { remainingConnectionsSlide } from "./remainingConnections";
+import { openKeynoteFeedback } from "./feedback";
 import type { KeynoteSlide } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -967,8 +968,18 @@ function ClosingSlide() {
         </p>
       </Reveal>
       <Reveal delay={1050}>
-        <div className="mt-8 inline-flex items-center rounded-full bg-hk-500 px-6 py-3 text-lg font-semibold text-white shadow-[0_18px_45px_rgba(0,113,227,0.22)]">
-          Explorez votre espace propriétaire
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="inline-flex items-center rounded-full bg-hk-500 px-6 py-3 text-lg font-semibold text-white shadow-[0_18px_45px_rgba(0,113,227,0.22)]">
+            Explorez votre espace propriétaire
+          </div>
+          <button
+            type="button"
+            onClick={openKeynoteFeedback}
+            className="inline-flex items-center gap-2 rounded-full border border-hk-500/30 bg-white px-6 py-3 text-lg font-semibold text-hk-700 shadow-sm transition hover:bg-hk-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hk-500 focus-visible:ring-offset-2"
+          >
+            <Star className="h-5 w-5" aria-hidden />
+            Donnez-nous votre avis
+          </button>
         </div>
       </Reveal>
       <Reveal delay={1250}>
@@ -1190,6 +1201,7 @@ export const keynoteSlides: KeynoteSlide[] = [
       lead: "Hello Keys gère avec Cadence. Vous voyez l’essentiel, et la suite se connecte.",
       chips: ["< 5 min", "J+1", "0 €"],
       signature: { thanks: "Merci à tous pour votre confiance", names: ["Thomas", "Fiona", "Mathilde"] },
+      feedback: true,
       align: "center",
     },
   },

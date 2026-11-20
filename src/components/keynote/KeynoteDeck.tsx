@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ArrowRight, ChevronLeft, ChevronRight, Maximize, Minimize, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Maximize, Minimize, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { keynoteSlides as slides } from "./deck";
+import { KeynoteFeedbackPanel } from "./feedback";
 import { Glow } from "./kit";
 import { MobileSlide } from "./mobileSlide";
 
@@ -94,6 +95,7 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [scale, setScale] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [hintVisible, setHintVisible] = useState(true);
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -182,6 +184,15 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
         if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(event.key)) {
           event.preventDefault();
           setStarted(true);
+        }
+        return;
+      }
+
+      // Le formulaire d'avis garde son clavier ; Échap le ferme.
+      if (feedbackOpen) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setFeedbackOpen(false);
         }
         return;
       }
@@ -367,6 +378,10 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
           >
             <ChevronRight />
           </ToolbarButton>
+          <ToolbarButton label="Donner votre avis" onClick={() => setFeedbackOpen(true)}>
+            <Star />
+            <span className="hidden sm:inline">Avis</span>
+          </ToolbarButton>
           <ToolbarButton label="Plein écran (F)" pressed={isFullscreen} onClick={() => void toggleFullscreen()}>
             {isFullscreen ? <Minimize /> : <Maximize />}
             <span className="hidden sm:inline">Plein écran</span>
@@ -375,6 +390,12 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
         </div>
       </div>
       )}
+
+      <KeynoteFeedbackPanel
+        open={feedbackOpen}
+        onOpen={() => setFeedbackOpen(true)}
+        onClose={() => setFeedbackOpen(false)}
+      />
     </div>
   );
 }

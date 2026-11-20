@@ -11,6 +11,8 @@ export interface KeynoteMobileSlide {
   footnote?: string;
   align?: "center";
   signature?: { thanks: string; names: string[] };
+  /** Affiche le bouton « Donnez-nous votre avis » (ouvre le formulaire). */
+  feedback?: boolean;
 }
 
 export interface KeynoteSlide {

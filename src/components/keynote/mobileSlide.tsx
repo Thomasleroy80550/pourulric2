@@ -1,4 +1,5 @@
-import { Check, Heart } from "lucide-react";
+import { Check, Heart, Star } from "lucide-react";
+import { openKeynoteFeedback } from "./feedback";
 import { Glow, Reveal } from "./kit";
 import type { KeynoteMobileSlide } from "./types";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,22 @@ export function MobileSlide({ content }: { content: KeynoteMobileSlide }) {
               </span>
             ))}
           </div>
+        </Reveal>
+      )}
+
+      {content.feedback && (
+        <Reveal delay={800}>
+          <button
+            type="button"
+            onClick={openKeynoteFeedback}
+            className={cn(
+              "mt-6 inline-flex items-center gap-2 rounded-full border border-hk-500/30 bg-white px-5 py-2.5 text-[15px] font-semibold text-hk-700 shadow-sm transition active:bg-hk-50",
+              centered && "mx-auto",
+            )}
+          >
+            <Star className="h-4 w-4" aria-hidden />
+            Donnez-nous votre avis
+          </button>
         </Reveal>
       )}
 

@@ -277,8 +277,9 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
         </div>
       )}
 
+      {/* Grandes flèches latérales : ordinateur uniquement, pour ne jamais couvrir le texte sur mobile. */}
       {!notesOpen && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 flex items-center px-3 sm:px-5">
+        <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 hidden items-center px-3 md:flex sm:px-5">
           <NavigationArrow direction="previous" disabled={index === 0} onClick={() => goTo(index - 1)} />
           <NavigationArrow
             direction="next"
@@ -369,14 +370,21 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
         </span>
         <span className="ml-3 hidden truncate text-neutral-400 md:inline">{slide.label}</span>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1">
-          <ToolbarButton label="Slide précédente (←)" disabled={index === 0} onClick={() => goTo(index - 1)}>
+        {/* Sur mobile, les flèches de la barre deviennent de gros boutons tactiles. */}
+        <div className="ml-auto flex shrink-0 items-center gap-1 max-sm:gap-2">
+          <ToolbarButton
+            label="Slide précédente (←)"
+            disabled={index === 0}
+            onClick={() => goTo(index - 1)}
+            className="max-sm:h-10 max-sm:w-10 max-sm:rounded-full max-sm:border max-sm:border-black/10 max-sm:bg-white max-sm:px-0 max-sm:shadow-sm max-sm:[&_svg]:h-5 max-sm:[&_svg]:w-5"
+          >
             <ChevronLeft />
           </ToolbarButton>
           <ToolbarButton
             label="Slide suivante (→)"
             disabled={index === slides.length - 1}
             onClick={() => goTo(index + 1)}
+            className="max-sm:h-10 max-sm:w-10 max-sm:rounded-full max-sm:border max-sm:border-hk-500/25 max-sm:bg-hk-50 max-sm:px-0 max-sm:text-hk-700 max-sm:shadow-sm max-sm:[&_svg]:h-5 max-sm:[&_svg]:w-5"
           >
             <ChevronRight />
           </ToolbarButton>

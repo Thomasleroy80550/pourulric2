@@ -212,12 +212,12 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
             {slide.cheatSheet && (
               <table className="mt-8 w-full border-collapse text-left text-sm">
                 <caption className={cn(notesHeading, "mb-2 text-left")}>
-                  Antisèche : le détail technique par capacité, pour les questions
+                  Antisèche : réponses simples aux questions propriétaires
                 </caption>
                 <thead>
                   <tr className="border-b border-black/10 text-neutral-500">
                     <th className="py-2 pr-6 font-medium">Capacité</th>
-                    <th className="py-2 pr-6 font-medium">Source</th>
+                    <th className="py-2 pr-6 font-medium">Où ?</th>
                     <th className="py-2 font-medium">À dire simplement</th>
                   </tr>
                 </thead>

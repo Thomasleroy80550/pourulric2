@@ -13,16 +13,15 @@ import {
   Eye,
   FileText,
   Gauge,
-  Globe,
   Image as ImageIcon,
   Images,
   KeyRound,
   Landmark,
   Lock,
-  Mail,
   Megaphone,
   MessageSquare,
   PhoneCall,
+  Plus,
   RefreshCw,
   ShieldCheck,
   Star,
@@ -38,7 +37,6 @@ import {
   Reveal,
   SlideFrame,
   SlideHeader,
-  TechNote,
   Wordmark,
 } from "./kit";
 import { cn } from "@/lib/utils";
@@ -195,18 +193,18 @@ const channelPromotions = [
 ];
 
 const promotionSteps = [
-  "L’équipe Hello Keys ouvre la page Promotions",
-  "Cadence lit les règles du canal en direct",
-  "La remise est envoyée aux plateformes sans ressaisie",
-  "L’offre peut être activée, modifiée ou mise en pause",
+  "Choisissez le canal de diffusion",
+  "Sélectionnez le type d’offre",
+  "Définissez votre remise",
+  "Publiez sans attendre une validation Hello Keys",
 ];
 
 function PromotionSlide() {
   return (
     <SlideFrame>
       <Glow className="left-[-220px] top-[220px] h-[520px] w-[640px]" />
-      <SlideHeader kicker="Preuve 1" className="text-[46px]">
-        Une période creuse devient une offre en ligne.
+      <SlideHeader kicker="Autonomie" className="text-[46px]">
+        Créez vos promotions vous-même.
       </SlideHeader>
       <div className="mt-8 grid min-h-0 flex-1 grid-cols-[520px_minmax(0,1fr)] gap-10">
         <div className="space-y-3">
@@ -256,7 +254,9 @@ function PromotionSlide() {
             </Reveal>
           </div>
           <Reveal delay={1450}>
-            <TechNote>{"POST /promotions/{propertyManagerCode} · applicableChannels · PATCH status=active|inactive"}</TechNote>
+            <p className="text-center text-sm leading-relaxed text-neutral-500">
+              Vous lancez l’offre au bon moment, même un dimanche soir.
+            </p>
           </Reveal>
         </div>
       </div>
@@ -295,11 +295,19 @@ function PhotoTile({ index, label, principal }: { index: number; label: string; 
   );
 }
 
-function PhotoGrid({ title, delay }: { title: string; delay: number }) {
+function PhotoGrid({ title, delay, editable }: { title: string; delay: number; editable?: boolean }) {
   return (
     <Reveal delay={delay} className="w-[330px] shrink-0">
       <Panel className="p-4">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">{title}</p>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500">{title}</p>
+          {editable && (
+            <Chip className="px-2 py-1 text-[11px] text-hk-700">
+              <Plus className="mr-1 h-3.5 w-3.5" aria-hidden />
+              Ajouter
+            </Chip>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3">
           {photoLabels.map((label, index) => (
             <PhotoTile key={label} index={index} label={label} principal={index === 0} />
@@ -314,34 +322,36 @@ function PhotosSlide() {
   return (
     <SlideFrame className="bg-white">
       <Glow className="right-[-160px] top-[180px] h-[500px] w-[620px]" />
-      <SlideHeader kicker="Preuve 2" className="text-[46px]">
-        Votre première photo travaille pour vous.
+      <SlideHeader kicker="Autonomie" className="text-[46px]">
+        Vos photos, sous votre contrôle.
       </SlideHeader>
       <div className="mt-6 grid min-h-0 flex-1 grid-cols-[390px_minmax(0,1fr)] gap-8">
         <Bullets
           className="mt-3 text-[19px]"
           items={[
-            "L’ordre des photos est piloté dans Cadence",
-            "La photo principale est choisie en un clic",
-            "Chaque photo part étiquetée avec son type",
-            "L’ordre retenu est répercuté sur les annonces",
-            "Une page de contrôle suit la synchronisation",
+            "Voyez toutes les photos de votre logement",
+            "Ajoutez de nouvelles photos",
+            "Modifiez leurs étiquettes : chambre, salle de bain, vue…",
+            "Changez leur ordre par glisser-déposer",
+            "Votre choix est répercuté sur les annonces",
           ]}
         />
         <div className="flex min-w-0 flex-col justify-center">
           <div className="flex items-center justify-center gap-5">
-            <PhotoGrid title="Dans Cadence" delay={450} />
-            <FlowArrow label="displayPriority" delay={850} />
+            <PhotoGrid title="Votre sélection" delay={450} editable />
+            <FlowArrow label="Votre choix" delay={850} />
             <PhotoGrid title="Sur l’annonce" delay={1050} />
           </div>
           <Reveal delay={1250}>
             <div className="mt-5 flex items-center justify-center gap-3 text-sm text-neutral-500">
               <Upload className="h-4 w-4 text-hk-600" aria-hidden />
-              Téléversement en masse, miroir sécurisé des URLs, contrôle par logement.
+              Vous gérez les photos, les étiquettes et l’ordre, au même endroit.
             </div>
           </Reveal>
           <Reveal delay={1400}>
-            <TechNote className="mt-2 text-center">displayPriority · Supply API · upsert images dédié · typeCode NextPax</TechNote>
+            <p className="mt-2 text-center text-sm leading-relaxed text-neutral-500">
+              Ce que vous choisissez ici est ce que les voyageurs voient.
+            </p>
           </Reveal>
         </div>
       </div>
@@ -441,19 +451,19 @@ function MessagesSlide() {
         <div className="flex min-w-0 flex-col justify-center">
           <InboxMock />
           <Reveal delay={950}>
-            <div className="mt-5 flex items-center justify-center gap-3">
-              <Chip>Tous les IDs hôte Airbnb</Chip>
-              <ArrowRight className="h-4 w-4 text-hk-600" aria-hidden />
-              <Chip>Fusion automatique · 1 fois par jour</Chip>
-              <ArrowRight className="h-4 w-4 text-hk-600" aria-hidden />
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+              <Chip>Boîte unique</Chip>
+              <Chip>Réponse relayée au bon canal</Chip>
               <Chip className="border-emerald-500/20 bg-emerald-50 text-emerald-700">
                 <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                Messaging NextPax
+                Configuration vérifiée chaque jour
               </Chip>
             </div>
           </Reveal>
           <Reveal delay={1100}>
-            <TechNote className="mt-3 text-center">messaging_model=api · redirection e-mail · user_ids · HTTP 200 ≠ message relayé</TechNote>
+            <p className="mt-3 text-center text-sm leading-relaxed text-neutral-500">
+              Avantage : une relation voyageur plus fluide, sans multiplier les applications.
+            </p>
           </Reveal>
         </div>
       </div>
@@ -510,10 +520,10 @@ function MultichannelSlide() {
           <Bullets
             className="mt-8 text-[19px]"
             items={[
-              "Airbnb, Booking et Abritel activés ensemble",
-              "Traitement par lots de 20 logements",
-              "Statuts relus automatiquement toutes les 20 secondes",
-              "Erreurs plateforme traduites en français actionnable",
+              "Airbnb, Booking et Abritel peuvent être activés ensemble",
+              "Le statut de diffusion est suivi automatiquement",
+              "Le verdict est observé en environ 3 minutes",
+              "Les erreurs sont expliquées clairement",
             ]}
           />
         </div>
@@ -545,17 +555,17 @@ function MultichannelSlide() {
           </Reveal>
           <Reveal delay={900}>
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-              <Chip>Lots de 20 logements</Chip>
-              <Chip>3 connexions en parallèle</Chip>
+              <Chip>Activation simultanée</Chip>
+              <Chip>Suivi automatique</Chip>
               <Chip>
                 <Clock3 className="mr-1.5 h-3.5 w-3.5 text-hk-600" aria-hidden />
-                Relecture toutes les 20 s
+                Verdict en ~3 min
               </Chip>
             </div>
           </Reveal>
           <Reveal delay={1050}>
             <p className="mt-4 text-center text-sm leading-relaxed text-neutral-500">
-              Si une plateforme refuse une annonce, l’équipe sait quoi corriger.
+              Avantage : votre logement est diffusé plus vite, avec moins de manipulations.
             </p>
           </Reveal>
         </div>
@@ -564,116 +574,80 @@ function MultichannelSlide() {
   );
 }
 
-const nextPaxSurfaces = ["Supply", "Connect", "ARI", "Messaging", "Promotions", "Reviews", "Notifications"];
-const schedules = [
-  { label: "Réservations", cadence: "toutes les quelques minutes" },
-  { label: "Cautions J0", cadence: "toutes les 15 minutes" },
-  { label: "Reversements J+1", cadence: "toutes les 15 minutes" },
-  { label: "Sauvegardes", cadence: "chaque nuit" },
+const automationCards = [
+  {
+    icon: CalendarDays,
+    title: "Réservations",
+    text: "Les nouvelles réservations sont relevées automatiquement.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Cautions",
+    text: "Les cautions sont traitées au bon moment.",
+  },
+  {
+    icon: Banknote,
+    title: "Reversements",
+    text: "Le reversement part à J+1 du départ.",
+  },
+  {
+    icon: CloudSun,
+    title: "Tarification",
+    text: "Beyond et la météo aident à ajuster les prix.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Messages",
+    text: "Les conversations et envois automatiques sont suivis.",
+  },
+  {
+    icon: Database,
+    title: "Sauvegardes",
+    text: "Les données sont sauvegardées chaque nuit.",
+  },
 ];
 
 function ArchitectureSlide() {
   return (
     <SlideFrame>
-      <SlideHeader kicker="Sous le capot" className="text-[46px]">
-        Cadence travaille en arrière-plan.
+      <Glow className="right-[-180px] top-[-140px] h-[520px] w-[680px]" />
+      <SlideHeader kicker="En arrière-plan" className="text-[46px]">
+        Cadence automatise le suivi quotidien.
       </SlideHeader>
-      <div className="mt-6 grid min-h-0 flex-1 grid-cols-[205px_minmax(0,1fr)_310px] gap-5">
-        <Reveal delay={350}>
-          <Panel className="flex h-full flex-col items-center justify-center p-5 text-center">
-            <IconBadge icon={Globe} />
-            <p className="mt-5 text-xl font-semibold">Hello Keys</p>
-            <p className="mt-2 text-sm leading-relaxed text-neutral-500">Votre espace propriétaire est alimenté par Cadence.</p>
-          </Panel>
-        </Reveal>
-        <Reveal delay={500}>
-          <Panel className="flex h-full flex-col p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-2xl font-semibold">~95 Edge Functions</p>
-                <p className="mt-1 text-sm text-neutral-500">De petits automates serverless, une mission chacun.</p>
-              </div>
-              <Chip>cycles de 15 min</Chip>
-            </div>
-            <div className="mt-5 grid flex-1 grid-cols-[repeat(19,minmax(0,1fr))] content-center gap-1.5">
-              {Array.from({ length: 95 }).map((_, index) => (
-                <span
-                  key={index}
-                  className={cn(
-                    "h-3 rounded-sm bg-hk-500/15",
-                    index % 17 === 0 && "bg-hk-500",
-                    index % 23 === 0 && "bg-hk-500/45",
-                  )}
-                />
-              ))}
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {schedules.map((item) => (
-                <div key={item.label} className="flex items-center gap-2 rounded-2xl border border-black/[0.06] bg-white px-3 py-2 shadow-sm">
-                  <Clock3 className="h-4 w-4 shrink-0 text-hk-600" aria-hidden />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-neutral-800">{item.label}</p>
-                    <p className="truncate text-[11px] text-neutral-500">{item.cadence}</p>
-                  </div>
+      <div className="mt-8 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_330px] gap-8">
+        <div className="grid grid-cols-2 gap-4">
+          {automationCards.map((item, index) => (
+            <Reveal key={item.title} delay={400 + index * 120}>
+              <Panel className="h-[132px] p-5">
+                <div className="flex items-center gap-3">
+                  <IconBadge icon={item.icon} />
+                  <p className="text-xl font-semibold text-neutral-900">{item.title}</p>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-neutral-500">{item.text}</p>
+              </Panel>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={900} className="h-full">
+          <Panel className="flex h-full flex-col justify-center p-7">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-neutral-500">Ce que vous y gagnez</p>
+            <div className="mt-7 space-y-5">
+              {[
+                "Moins de tâches manuelles",
+                "Des actions lancées au bon moment",
+                "Une information à jour dans votre espace",
+              ].map((benefit) => (
+                <div key={benefit} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <Check className="h-4 w-4" aria-hidden />
+                  </span>
+                  <p className="text-lg font-medium leading-snug text-neutral-800">{benefit}</p>
                 </div>
               ))}
             </div>
           </Panel>
         </Reveal>
-        <div className="flex min-h-0 flex-col gap-3">
-          <Reveal delay={650}>
-            <Panel className="p-4">
-              <p className="text-lg font-semibold">NextPax</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {nextPaxSurfaces.map((surface) => (
-                  <Chip key={surface} className="px-2 py-1 text-[11px]">
-                    {surface}
-                  </Chip>
-                ))}
-              </div>
-            </Panel>
-          </Reveal>
-          <Reveal delay={780}>
-            <Panel className="p-4">
-              <p className="text-lg font-semibold">Stripe</p>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-500">Cautions · paiements directs · Connect</p>
-            </Panel>
-          </Reveal>
-          <Reveal delay={910}>
-            <Panel className="p-4">
-              <p className="text-lg font-semibold">Beyond</p>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-500">Flux quotidien · API « Build to Spec »</p>
-            </Panel>
-          </Reveal>
-          <Reveal delay={1040}>
-            <div className="flex flex-wrap gap-1.5">
-              <Chip className="px-2 py-1 text-[11px]">
-                <Mail className="mr-1 h-3 w-3" aria-hidden />
-                Resend
-              </Chip>
-              <Chip className="px-2 py-1 text-[11px]">
-                <CloudSun className="mr-1 h-3 w-3" aria-hidden />
-                Tarification météo
-              </Chip>
-              <Chip className="px-2 py-1 text-[11px]">
-                <Globe className="mr-1 h-3 w-3" aria-hidden />
-                hellokeys.fr
-              </Chip>
-            </div>
-          </Reveal>
-        </div>
       </div>
-      <Reveal delay={1150}>
-        <div className="mt-5 flex items-center justify-center gap-4 rounded-3xl border border-black/[0.06] bg-white/80 px-5 py-3 text-sm text-neutral-600 shadow-sm">
-          <Database className="h-4 w-4 text-hk-600" aria-hidden />
-          <span className="font-semibold text-neutral-900">Supabase</span>
-          <span>Postgres</span>
-          <span className="text-neutral-300">·</span>
-          <span>RLS</span>
-          <span className="text-neutral-300">·</span>
-          <span>Vault</span>
-        </div>
-      </Reveal>
     </SlideFrame>
   );
 }
@@ -791,7 +765,7 @@ function OwnerPortalSlide() {
         </Reveal>
         <Reveal delay={1450}>
           <Chip className="border-hk-500/20 bg-hk-50 px-4 py-2 text-sm text-hk-700">
-            La transparence n’est plus une promesse, c’est une API.
+            La transparence n’est plus une promesse : elle est affichée.
           </Chip>
         </Reveal>
       </div>
@@ -861,15 +835,17 @@ function MoneySlide() {
               <ArrowRight className="h-4 w-4 text-hk-600" aria-hidden />
               <Chip>J+1</Chip>
               <ArrowRight className="h-4 w-4 text-hk-600" aria-hidden />
-              <Chip>Virement Stripe Connect</Chip>
+              <Chip>Virement vers votre compte</Chip>
               <Chip>
                 <Clock3 className="mr-1.5 h-3.5 w-3.5 text-hk-600" aria-hidden />
-                cycle de 15 min
+                contrôle régulier
               </Chip>
             </div>
           </Reveal>
           <Reveal delay={1380}>
-            <TechNote className="mt-4">Frais lus sur balance_transaction · cautions exclues</TechNote>
+            <p className="mt-4 text-sm leading-relaxed text-neutral-500">
+              Le calcul est lisible : montant encaissé, frais Stripe réels, reversement.
+            </p>
           </Reveal>
         </div>
 
@@ -889,34 +865,34 @@ function MoneySlide() {
 
 const trustItems = [
   {
-    icon: KeyRound,
-    title: "Clés révocables",
-    text: "Seule leur empreinte SHA-256 est stockée, jamais dans le navigateur.",
-  },
-  {
     icon: Lock,
-    title: "Secrets au coffre",
-    text: "Supabase Vault : jamais affichés, jamais journalisés.",
+    title: "Vos logements uniquement",
+    text: "Vous ne voyez que les biens attribués à votre profil.",
   },
   {
-    icon: ShieldCheck,
-    title: "Accès contrôlé",
-    text: "RLS, vérification JWT et attribution du logement avant chaque appel.",
-  },
-  {
-    icon: Gauge,
-    title: "120 appels / minute",
-    text: "Quota par clé, avec Retry-After respecté.",
+    icon: Camera,
+    title: "Photos protégées",
+    text: "Les liens des photos de ménage expirent après 5 minutes.",
   },
   {
     icon: BadgeCheck,
-    title: "Actions sensibles",
-    text: "Réservées au titulaire du compte, pas aux collaborateurs.",
+    title: "Actions réservées",
+    text: "Les actions sensibles restent réservées au titulaire du compte.",
   },
   {
     icon: Landmark,
-    title: "Identité et banque",
-    text: "Vérifiées par Stripe ; bénéficiaire figé au moment du paiement.",
+    title: "Banque vérifiée",
+    text: "Stripe vérifie l’identité et les coordonnées bancaires.",
+  },
+  {
+    icon: KeyRound,
+    title: "Accès révocables",
+    text: "Les clés d’accès peuvent être désactivées si nécessaire.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Données séparées",
+    text: "Chaque compte est strictement cloisonné.",
   },
 ];
 
@@ -1021,10 +997,10 @@ export const keynoteSlides: KeynoteSlide[] = [
     label: "Cadence par Hello Keys",
     Component: PromiseSlide,
     notes: [
-      "Cadence est la plateforme interne développée par Hello Keys. Elle n’est pas un logiciel figé : elle est enrichie en continu, au fil des besoins de gestion et des retours du terrain.",
-      "Cadence est connectée en profondeur à NextPax, le channel manager certifié qui fait le lien avec les plateformes de réservation. Pour vous, l’image est simple : une action décidée dans Cadence peut être transmise aux plateformes, sans ressaisie plateforme par plateforme.",
-      "Cadence pilote aussi les paiements avec Stripe, la tarification dynamique avec Beyond, les messages voyageurs, les avis et les sauvegardes. Surtout, elle alimente votre espace propriétaire grâce à une API privée et sécurisée.",
-      "Le résultat pour vous : moins d’attente, une gestion plus réactive et une information que vous pouvez consulter directement.",
+      "Cadence est la plateforme développée par Hello Keys. Elle n’est pas figée : elle est enrichie en continu, à partir des besoins de gestion et des retours du terrain.",
+      "Vous n’avez pas besoin de connaître la mécanique interne. Ce qu’il faut retenir est simple : Cadence relie votre espace propriétaire aux plateformes de réservation, aux paiements et aux outils de tarification.",
+      "Cette base permet deux choses. D’un côté, Hello Keys automatise les tâches répétitives. De l’autre, vous recevez une information plus claire et vous pouvez agir vous-même sur de plus en plus de sujets.",
+      "Le résultat pour vous : moins d’attente, plus de visibilité, et davantage de contrôle sur votre location.",
     ],
     transition: "Commençons par un cas très concret : une période creuse à remplir.",
   },
@@ -1033,10 +1009,10 @@ export const keynoteSlides: KeynoteSlide[] = [
     label: "Promotion rapide",
     Component: PromotionSlide,
     notes: [
-      "Quand une période creuse apparaît, la vitesse compte. Avec Cadence, l’équipe Hello Keys ouvre la page Promotions, choisit le canal, puis le type d’offre. Cinq canaux sont disponibles : Booking.com, Airbnb, Expedia, Vrbo et Marriott.",
-      "Les règles affichées ne sont pas recopiées à la main. Cadence les lit en direct chez NextPax : dernière minute avec seuil en heures, réservation anticipée, dates de séjour. L’équipe saisit la remise et valide.",
-      "Cadence appelle ensuite l’API Promotions de NextPax. Une API, c’est un guichet entre deux logiciels : Cadence dépose l’offre, NextPax la distribue aux plateformes concernées. Aucune ressaisie.",
-      "Ce qui pouvait prendre un échange et de l’attente prend moins de cinq minutes. Pour vous, cela signifie une réaction plus rapide lorsqu’un créneau doit être travaillé.",
+      "Quand une période creuse apparaît, vous pouvez agir immédiatement. Depuis votre espace, vous ouvrez Promotions, vous choisissez le canal, le type d’offre et la remise, puis vous publiez. Vous n’avez pas besoin d’attendre une validation de Hello Keys.",
+      "Cinq canaux sont disponibles : Booking.com, Airbnb, Expedia, Vrbo et Marriott. Les types d’offre proposés correspondent aux règles réelles de chaque plateforme : dernière minute, réservation anticipée, dates de séjour.",
+      "Une fois validée, l’offre est envoyée aux plateformes concernées. Vous n’avez rien à recopier d’un site à l’autre. Vous pouvez ensuite la modifier, l’activer ou la mettre en pause.",
+      "L’avantage est simple : vous réagissez au bon moment, même un dimanche soir, et vous gardez la main sur votre stratégie commerciale.",
     ],
     transition: "Une offre attire le regard. Mais ce que le voyageur voit d’abord, c’est votre première photo.",
   },
@@ -1045,10 +1021,10 @@ export const keynoteSlides: KeynoteSlide[] = [
     label: "Photos des annonces",
     Component: PhotosSlide,
     notes: [
-      "La première photo vend le séjour. Avec Cadence, l’équipe Hello Keys pilote directement l’ordre des photos de votre annonce : glisser, déposer, choisir la photo principale. Un geste simple, mais décisif.",
-      "Chaque photo peut être étiquetée avec son type : chambre, salle de bain, vue. À l’enregistrement, l’ordre choisi devient la priorité d’affichage transmise à NextPax. Autrement dit, l’ordre préparé dans Cadence est l’ordre diffusé sur les annonces.",
-      "La chaîne est complète : téléversement en masse, miroir sécurisé des images, page de contrôle de synchronisation par logement et export CSV.",
-      "Pour vous, cela veut dire une annonce plus soignée, mise à jour sans friction, avec la meilleure image en premier.",
+      "Vous pouvez voir toutes les photos de votre logement, en ajouter de nouvelles, modifier leurs étiquettes et changer leur ordre. Tout se fait depuis le même écran, sans demande à Hello Keys.",
+      "La première photo est choisie en un clic. Les autres se réorganisent par glisser-déposer. Vous pouvez indiquer ce que montre chaque image : chambre, salle de bain, vue, cuisine.",
+      "Quand vous enregistrez, votre choix est répercuté sur les annonces. La photo principale et l’ordre affiché aux voyageurs suivent votre sélection.",
+      "L’avantage est direct : votre annonce reste à jour, plus claire et plus attractive, sans échange ni délai.",
     ],
     transition: "L’annonce est belle et visible. Le voyageur écrit maintenant : il faut répondre vite et au bon endroit.",
   },
@@ -1057,10 +1033,10 @@ export const keynoteSlides: KeynoteSlide[] = [
     label: "Messages voyageurs",
     Component: MessagesSlide,
     notes: [
-      "Les voyageurs écrivent depuis plusieurs plateformes. Cadence rassemble leurs conversations dans une seule boîte de réception : dernier message, badge non lu, historique complet à l’ouverture, réponse relayée vers le bon canal.",
-      "Il y a aussi un détail invisible mais important. Pour qu’un message parte correctement vers Airbnb, NextPax doit connaître l’identifiant hôte de chaque annonce. S’il en manque un, NextPax peut répondre « bien reçu » sans que le message soit réellement relayé. Aucune erreur visible.",
-      "Cadence corrige cela automatiquement : une fois par jour, elle rassemble tous les identifiants hôte des annonces et met la configuration à jour.",
-      "Ajoutez les messages automatiques déclenchés par les événements de réservation et les notifications push. La relation voyageur est mieux suivie, sans multiplier les applications.",
+      "Les voyageurs écrivent depuis plusieurs plateformes. Cadence rassemble leurs conversations dans une seule boîte de réception : dernier message, messages non lus, historique complet et réponse envoyée sur le bon canal.",
+      "Des messages automatiques peuvent aussi être déclenchés pendant le séjour, par exemple lorsqu’une réservation est créée, modifiée ou annulée. L’équipe Hello Keys garde donc une vue claire de la relation voyageur.",
+      "Cadence vérifie aussi chaque jour que la configuration est complète, pour éviter qu’un message soit accepté par une plateforme sans être réellement transmis.",
+      "L’avantage pour vous : les voyageurs sont mieux suivis, les réponses sont plus fluides et le risque de message perdu diminue.",
     ],
     transition: "Cette réactivité fonctionne aussi à plus grande échelle, lorsqu’il faut diffuser un logement sur plusieurs canaux.",
   },
@@ -1070,21 +1046,21 @@ export const keynoteSlides: KeynoteSlide[] = [
     Component: MultichannelSlide,
     notes: [
       "Mettre un logement en ligne sur plusieurs plateformes peut vite devenir répétitif. Cadence permet d’activer Airbnb, Booking et Abritel ensemble.",
-      "Le traitement se fait par lots de vingt logements, avec trois connexions en parallèle. Ensuite, Cadence relit automatiquement les statuts toutes les vingt secondes, jusqu’au verdict. Le délai observé est d’environ trois minutes.",
-      "Si une plateforme refuse une annonce, Cadence ne se contente pas d’un code technique. L’erreur est traduite en français actionnable, pour que l’équipe sache quoi corriger.",
-      "Pour vous, la diffusion devient plus rapide et plus lisible. Votre logement peut être présent sur les canaux importants sans journées de clics.",
+      "Ensuite, le statut de diffusion est suivi automatiquement. Le verdict arrive en quelques minutes, avec un délai observé d’environ trois minutes.",
+      "Si une plateforme refuse une annonce, la raison est expliquée clairement. L’équipe sait ainsi quoi corriger, sans chercher à décoder un message technique.",
+      "L’avantage pour vous : votre logement est diffusé plus vite, avec moins de manipulations et une meilleure visibilité sur l’état d’avancement.",
     ],
-    transition: "Tout cela repose sur une machine discrète. Regardons-la une minute, sans jargon.",
+    transition: "Tout cela repose sur une machine discrète. Regardons ce qu’elle automatise, sans entrer dans la technique.",
   },
   {
     id: "architecture",
     label: "Sous le capot",
     Component: ArchitectureSlide,
     notes: [
-      "Cadence travaille en arrière-plan. Au centre, il y a environ quatre-vingt-quinze Edge Functions. Imaginez de petits automates serverless : chacun a une mission, et ne se réveille que lorsqu’il est nécessaire.",
-      "Toutes les quelques minutes, l’un relève les nouvelles réservations. Toutes les quinze minutes, d’autres traitent les cautions du jour J et les reversements à J+1. Chaque nuit, une sauvegarde s’exécute.",
-      "Autour de cette machine, Cadence communique avec NextPax pour les plateformes, Stripe pour l’argent, Beyond pour la tarification dynamique, Resend pour les e-mails, et avec le moteur de tarification météo développé par Hello Keys.",
-      "Les secrets sont conservés dans un coffre, Supabase Vault. Les données sont cloisonnées par RLS : un vigile vérifie chaque ligne avant de la laisser lire.",
+      "Cadence travaille en arrière-plan. Inutile de retenir la technique : imaginez de petits automates, chacun chargé d’une tâche précise.",
+      "Les nouvelles réservations sont relevées automatiquement. Les cautions sont traitées au bon moment. Les reversements partent à J+1 du départ. Les données sont sauvegardées chaque nuit.",
+      "Cadence est aussi connecté aux plateformes de réservation, à Stripe pour les paiements, à Beyond et à la tarification météo pour ajuster les prix.",
+      "L’avantage est concret : moins de tâches manuelles, des actions lancées au bon moment, et une information à jour dans votre espace propriétaire.",
       "La machine avance, même lorsque vous ne la regardez pas.",
     ],
     transition: "Cadence travaille pour Hello Keys. La suite vous concerne directement : votre espace propriétaire.",
@@ -1094,8 +1070,8 @@ export const keynoteSlides: KeynoteSlide[] = [
     label: "Vous voyez",
     Component: TransitionSlide,
     notes: [
-      "Jusqu’ici, nous avons vu Cadence au service de l’équipe Hello Keys : promotions, photos, messages, diffusion. Mais l’autonomie de l’équipe ne suffit pas. Il faut aussi que vous, propriétaire, soyez informé sans dépendre d’un appel ou d’un message.",
-      "C’est le rôle de votre espace propriétaire. Il est séparé de Cadence, mais alimenté par son API privée et sécurisée. Chaque propriétaire ne voit que les logements attribués à son profil.",
+      "Jusqu’ici, nous avons vu comment Cadence aide Hello Keys à mieux gérer : promotions, photos, messages et diffusion. Mais la gestion efficace ne suffit pas. Vous devez aussi pouvoir suivre ce qui se passe, sans dépendre d’un appel ou d’un message.",
+      "C’est le rôle de votre espace propriétaire. Il vous donne accès aux informations de vos logements, et uniquement à celles-ci.",
       "Le principe est simple : Cadence gère, vous voyez. Vous n’appelez plus pour demander une nouvelle : elle est déjà là.",
     ],
     transition: "Voici les sept capacités de votre espace.",
@@ -1107,45 +1083,45 @@ export const keynoteSlides: KeynoteSlide[] = [
     notes: [
       "Votre espace propriétaire rassemble sept capacités. Vos réservations : dates, statut, canal, référence et montant du séjour, sans jamais exposer les coordonnées des voyageurs. Vos prix et disponibilités : jour par jour, jusqu’à trois cent soixante-six jours.",
       "Vos dates personnelles : vous pouvez les bloquer, avec ou sans demande de ménage. Vos ménages : interventions, statuts, pièces et photos avant et après. Tous vos avis, sans exception. Une alerte à chaque réservation, modification ou annulation. Et enfin, votre reversement automatique.",
-      "Chaque euro encaissé, chaque ménage photographié, chaque avis — visible en direct.",
-      "La transparence n’est plus une promesse, c’est une API.",
+      "L’objectif n’est pas de vous montrer de la technique. L’objectif est de vous éviter des questions : vous savez ce qui est réservé, ce qui est fait et ce qui vous sera versé.",
+      "La transparence n’est plus une promesse : elle est affichée.",
     ],
     transition: "Six de ces capacités vous informent. La septième concerne votre argent.",
     cheatSheet: [
       {
         capacity: "Réservations",
-        source: "owner-site-reservations",
-        say: "Dates, statut, canal, référence, montant du séjour. Ni coordonnées voyageurs, ni données Stripe.",
+        source: "Votre espace",
+        say: "Dates, statut, canal, référence et montant du séjour. Ni coordonnées voyageurs, ni données de paiement.",
       },
       {
         capacity: "Prix et disponibilités",
-        source: "owner-site-calendar",
-        say: "Lecture seule, jusqu’à 366 jours : prix Cadence, disponibilité NextPax, blocages locaux.",
+        source: "Calendrier",
+        say: "Consultation jour par jour, jusqu’à 366 jours, avec les prix et les blocages.",
       },
       {
         capacity: "Blocage de dates",
-        source: "owner-site-blocks",
-        say: "Permission d’écriture explicite. Chaque demande porte une Idempotency-Key UUID : un numéro de ticket unique. Reçue deux fois, exécutée une fois.",
+        source: "Calendrier",
+        say: "Vous bloquez vos dates personnelles, avec ou sans demande de ménage, sans risque de doublon.",
       },
       {
         capacity: "Ménages",
-        source: "owner-site-cleaning",
-        say: "Interventions, statuts, pièces, photos. Liens signés valables 5 minutes : un ticket de vestiaire qui expire. Aucune consigne d’accès privée transmise.",
+        source: "Ménage",
+        say: "Interventions, statuts, pièces et photos. Les liens photos expirent après 5 minutes.",
       },
       {
         capacity: "Avis",
-        source: "owner-site-reviews",
-        say: "Pagination intégrale, sans plafond artificiel. Chaque page est signée : comme un livre aux pages numérotées, s’il en manque une, cela se voit.",
+        source: "Avis",
+        say: "Tous les avis sont consultables, sans plafond artificiel.",
       },
       {
-        capacity: "Notification",
-        source: "Webhook HMAC-SHA256",
-        say: "La sonnette, avec un sceau de cire qui prouve l’expéditeur. File durable : si personne n’ouvre, on resonne en espaçant les essais. Test de signature sans notification fictive. Pause et reprise depuis l’interface.",
+        capacity: "Alertes",
+        source: "Notifications",
+        say: "Vous êtes informé à chaque réservation, modification ou annulation.",
       },
       {
         capacity: "Paiement",
-        source: "Stripe Connect",
-        say: "Reversement automatique à J+1, détaillé sur la slide suivante.",
+        source: "Reversements",
+        say: "Le reversement part automatiquement à J+1 du départ, détaillé sur la slide suivante.",
       },
     ],
   },
@@ -1155,9 +1131,9 @@ export const keynoteSlides: KeynoteSlide[] = [
     Component: MoneySlide,
     notes: [
       "Parlons d’argent, car c’est là que la confiance se gagne ou se perd.",
-      "Le lendemain du départ du voyageur, votre reversement part. Automatiquement. Toutes les quinze minutes, un automate repère les séjours arrivés à J+1 et lance les virements via Stripe Connect, le circuit qui relie Stripe à votre compte.",
-      "Le montant est simple à expliquer : le total réellement encaissé, moins uniquement les frais Stripe réels. Cadence ne fait pas d’estimation : il lit ces frais sur la ligne de relevé Stripe elle-même. Zéro commission de gestion. Les cautions sont exclues du calcul.",
-      "Deux protections complètent le dispositif. L’idempotence empêche de verser deux fois la même chose, même si l’opération est relancée. Et en cas de litige, de remboursement ou d’annulation, le reversement se bloque automatiquement.",
+      "Le lendemain du départ du voyageur, votre reversement part automatiquement. Cadence vérifie régulièrement les séjours arrivés à J+1, puis lance le virement.",
+      "Le montant est simple à lire : le total réellement encaissé, moins uniquement les frais Stripe réels. Zéro commission de gestion. Les cautions sont exclues du calcul.",
+      "Un même virement ne peut pas partir deux fois. Et en cas de litige, de remboursement ou d’annulation, le reversement se bloque automatiquement.",
       "Zéro euro de commission cachée.",
     ],
     transition: "Une telle visibilité n’a de valeur que si les accès sont strictement protégés.",
@@ -1167,10 +1143,10 @@ export const keynoteSlides: KeynoteSlide[] = [
     label: "Sécurité et confidentialité",
     Component: TrustSlide,
     notes: [
-      "Tout montrer ne veut pas dire tout exposer. Les clés d’accès sont révocables, et Cadence n’en conserve que le hash, c’est-à-dire leur empreinte digitale. On peut reconnaître la clé, pas la refabriquer.",
-      "Les secrets sont conservés dans Supabase Vault, un coffre-fort. Ils ne sont jamais affichés ni écrits dans les journaux techniques. Avant chaque appel, Cadence vérifie le badge de l’utilisateur, puis que le logement demandé est bien attribué à son profil.",
-      "Un quota de cent vingt appels par minute et par clé protège l’ensemble. Les actions sensibles sont réservées au titulaire du compte, pas aux collaborateurs. L’identité et les coordonnées bancaires sont vérifiées par Stripe, et le bénéficiaire est figé au moment du paiement.",
-      "Et surtout : zéro coordonnée voyageur n’est exposée au propriétaire.",
+      "Tout montrer ne veut pas dire tout exposer. Vous voyez les informations de vos logements, et uniquement celles-ci.",
+      "Les accès peuvent être révoqués si nécessaire. Les actions sensibles sont réservées au titulaire du compte. Les liens des photos de ménage expirent après cinq minutes.",
+      "Pour les paiements, l’identité et les coordonnées bancaires sont vérifiées par Stripe. Le bénéficiaire est figé au moment du paiement.",
+      "Et surtout : zéro coordonnée voyageur n’est exposée au propriétaire. Vous avez la visibilité, sans compromettre la confidentialité.",
     ],
     transition: "Il reste une phrase pour résumer cette approche.",
   },

@@ -1,4 +1,3 @@
-import type { ComponentType } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -39,22 +38,9 @@ import {
   SlideHeader,
   Wordmark,
 } from "./kit";
+import { costSlides } from "./costSection";
+import type { KeynoteSlide } from "./types";
 import { cn } from "@/lib/utils";
-
-export interface KeynoteCheatSheetRow {
-  capacity: string;
-  source: string;
-  say: string;
-}
-
-export interface KeynoteSlide {
-  id: string;
-  label: string;
-  Component: ComponentType;
-  notes: string[];
-  transition: string;
-  cheatSheet?: KeynoteCheatSheetRow[];
-}
 
 function FlowArrow({ label, delay = 0 }: { label?: string; delay?: number }) {
   return (
@@ -1063,8 +1049,9 @@ export const keynoteSlides: KeynoteSlide[] = [
       "L’avantage est concret : moins de tâches manuelles, des actions lancées au bon moment, et une information à jour dans votre espace propriétaire.",
       "La machine avance, même lorsque vous ne la regardez pas.",
     ],
-    transition: "Cadence travaille pour Hello Keys. La suite vous concerne directement : votre espace propriétaire.",
+    transition: "Avant d’ouvrir votre espace propriétaire, regardons ce que représente réellement cette plateforme.",
   },
+  ...costSlides,
   {
     id: "transition",
     label: "Vous voyez",

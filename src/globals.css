@@ -977,3 +977,54 @@ html, body {
     will-change: transform, opacity;
   }
 }
+
+/* Mode mobile de la keynote : la slide devient une page verticale lisible. */
+@media (max-width: 767px) {
+  .keynote-stage {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100%;
+    transform: none !important;
+  }
+
+  .keynote-stage > div {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100%;
+  }
+
+  .keynote-stage section {
+    height: auto !important;
+    min-height: calc(100dvh - 3rem);
+    overflow: visible !important;
+    padding: 2rem 1.25rem 6rem !important;
+  }
+
+  .keynote-stage [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .keynote-stage .col-span-2 {
+    grid-column: span 1 / span 1 !important;
+  }
+
+  .keynote-stage [class*="w-["] {
+    max-width: 100% !important;
+  }
+
+  .keynote-stage .keynote-flow {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .keynote-stage .keynote-flow > * {
+    max-width: 100%;
+  }
+
+  .keynote-stage .keynote-flow .keynote-flow-arrow svg {
+    transform: rotate(90deg);
+  }
+}

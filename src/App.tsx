@@ -87,6 +87,7 @@ import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
 import AdminConsumablesPage from "./pages/AdminConsumablesPage";
 import AdminKeyBoardPage from "./pages/AdminKeyBoardPage";
 import AdminKeynotePage from "./pages/AdminKeynotePage";
+import KeynotePage from "./pages/KeynotePage";
 import RedeemInvitePage from './pages/RedeemInvitePage';
 import JoinSharedSpacePage from './pages/JoinSharedSpacePage';
 import SpaceSelectionPage from './pages/SpaceSelectionPage';
@@ -183,14 +184,21 @@ const queryClient = new QueryClient();
 function App() {
   // Ces écrans publics restent indépendants de la session et de ses fenêtres modales.
   const publicStandalonePath = window.location.pathname.replace(/\/$/, '');
-  if (publicStandalonePath === '/embed/avis' || publicStandalonePath === '/preview/digicode' || publicStandalonePath === '/halloween') {
+  if (
+    publicStandalonePath === '/embed/avis' ||
+    publicStandalonePath === '/preview/digicode' ||
+    publicStandalonePath === '/halloween' ||
+    publicStandalonePath === '/keynote'
+  ) {
     return (
       <BrowserRouter>
         <MigrationBanner />
+        <Sonner />
         <Routes>
           <Route path="/embed/avis" element={<ReviewsEmbedPage />} />
           <Route path="/preview/digicode" element={<PinPreview />} />
           <Route path="/halloween" element={<Index />} />
+          <Route path="/keynote" element={<KeynotePage />} />
         </Routes>
       </BrowserRouter>
     );

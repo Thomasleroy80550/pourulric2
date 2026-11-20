@@ -45,7 +45,7 @@ import { cn } from "@/lib/utils";
 
 function FlowArrow({ label, delay = 0 }: { label?: string; delay?: number }) {
   return (
-    <Reveal delay={delay} className="flex flex-col items-center gap-2 text-hk-600">
+    <Reveal delay={delay} className="keynote-flow-arrow flex flex-col items-center gap-2 text-hk-600">
       <ArrowRight className="h-8 w-8" aria-hidden />
       {label && <span className="font-mono text-[11px] uppercase tracking-[0.18em]">{label}</span>}
     </Reveal>
@@ -339,7 +339,7 @@ function PhotosSlide() {
           ]}
         />
         <div className="flex min-w-0 flex-col justify-center">
-          <div className="flex items-center justify-center gap-5">
+          <div className="keynote-flow flex items-center justify-center gap-5">
             <PhotoGrid title="Dans Cadence" delay={450} editable />
             <FlowArrow label="Connexion" delay={850} />
             <PhotoGrid title="Votre espace" delay={1050} pending />
@@ -769,7 +769,7 @@ function OwnerPortalSlide() {
       </div>
       <div className="mt-6 grid grid-cols-[1fr_auto] items-end gap-8">
         <Reveal delay={1250}>
-          <div className="flex items-start gap-10">
+          <div className="keynote-flow flex items-start gap-10">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Déjà dans votre espace</p>
               <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">

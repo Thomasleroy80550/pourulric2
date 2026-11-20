@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type TouchEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Maximize, Minimize, StickyNote, X } from "lucide-react";
 import { toast } from "sonner";
@@ -29,7 +29,7 @@ function ToolbarButton({
       aria-label={label}
       aria-pressed={pressed}
       className={cn(
-        "gap-2 text-neutral-500 hover:bg-black/[0.04] hover:text-neutral-950 focus-visible:ring-hk-500 focus-visible:ring-offset-0 [&_svg]:h-4 [&_svg]:w-4",
+        "gap-2 text-neutral-500 hover:bg-black/[0.04] hover:text-neutral-950 focus-visible:ring-hk-500 focus-visible:ring-offset-0 max-sm:px-2 [&_svg]:h-4 [&_svg]:w-4",
         pressed && "bg-black/[0.05] text-neutral-950",
         className,
       )}
@@ -39,12 +39,47 @@ function ToolbarButton({
 }
 
 function Shortcut({ children }: { children: string }) {
-  return <kbd className="rounded border border-black/10 px-1.5 font-sans text-[11px] text-neutral-400">{children}</kbd>;
+  return (
+    <kbd className="hidden rounded border border-black/10 px-1.5 font-sans text-[11px] text-neutral-400 sm:inline">
+      {children}
+    </kbd>
+  );
 }
 
-export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
+function NavigationArrow({
+  direction,
+  disabled,
+  onClick,
+}: {
+  direction: "previous" | "next";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  const isPrevious = direction === "previous";
+  const Icon = isPrevious ? ChevronLeft : ChevronRight;
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      aria-label={isPrevious ? "Slide précédente" : "Slide suivante"}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "pointer-events-auto h-12 w-12 rounded-full border border-black/10 bg-white/85 text-neutral-700 shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl hover:bg-white hover:text-neutral-950 focus-visible:ring-hk-500 focus-visible:ring-offset-0 disabled:opacity-30 sm:h-14 sm:w-14",
+        isPrevious ? "mr-auto" : "ml-auto",
+      )}
+    >
+      <Icon className="h-6 w-6" aria-hidden />
+    </Button>
+  );
+}
+
+export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [scale, setScale] = useState(1);
   const [notesOpen, setNotesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -94,6 +129,24 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
     document.addEventListener("fullscreenchange", sync);
     return () => document.removeEventListener("fullscreenchange", sync);
   }, []);
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+
+    goTo(index + (deltaX < 0 ? 1 : -1));
+  };
 
   // Réabonné à chaque rendu : le gestionnaire lit toujours la slide courante.
   useEffect(() => {
@@ -152,12 +205,17 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
           "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, ui-sans-serif, system-ui, sans-serif",
       }}
     >
-      <div ref={hostRef} className="relative min-h-0 flex-1 overflow-hidden">
+      <div
+        ref={hostRef}
+        className="relative min-h-0 flex-1 overflow-hidden max-md:overflow-y-auto"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div
           role="group"
           aria-roledescription="slide"
           aria-label={`Slide ${index + 1} sur ${slides.length} : ${slide.label}`}
-          className="absolute left-1/2 top-1/2"
+          className="keynote-stage absolute left-1/2 top-1/2"
           style={{
             width: STAGE_WIDTH,
             height: STAGE_HEIGHT,
@@ -169,7 +227,7 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
             <Slide />
           </div>
         </div>
-        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-black/[0.05]">
+        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-black/[0.05] max-md:hidden">
           <div
             className="h-full bg-hk-500 transition-[width] duration-500"
             style={{ width: `${((index + 1) / slides.length) * 100}%` }}
@@ -177,11 +235,26 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
         </div>
       </div>
 
+      <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/85 px-3 py-1.5 text-xs font-medium text-neutral-500 shadow-sm backdrop-blur-xl md:hidden">
+        Glissez ou utilisez les flèches
+      </div>
+
+      {!notesOpen && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 flex items-center px-3 sm:px-5">
+          <NavigationArrow direction="previous" disabled={index === 0} onClick={() => goTo(index - 1)} />
+          <NavigationArrow
+            direction="next"
+            disabled={index === slides.length - 1}
+            onClick={() => goTo(index + 1)}
+          />
+        </div>
+      )}
+
       {notesOpen && (
         <aside
           key={slide.id}
           aria-label="Notes orateur"
-          className="h-[40%] shrink-0 overflow-y-auto border-t border-black/10 bg-white/95 px-8 pb-14 pt-6 backdrop-blur-xl"
+          className="h-[40%] shrink-0 overflow-y-auto border-t border-black/10 bg-white/95 px-4 pb-14 pt-6 backdrop-blur-xl sm:px-8"
         >
           <div className="mx-auto max-w-6xl">
             <div className="grid gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -247,14 +320,16 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
             "absolute inset-x-0 bottom-0 opacity-0 transition-opacity duration-300 focus-within:opacity-100 hover:opacity-100",
         )}
       >
-        <ToolbarButton label="Quitter la présentation" onClick={onExit}>
-          <X />
-          Quitter
-        </ToolbarButton>
-        <span className="ml-3 tabular-nums text-neutral-700">
+        {onExit && (
+          <ToolbarButton label="Quitter la présentation" onClick={onExit}>
+            <X />
+            <span className="hidden sm:inline">Quitter</span>
+          </ToolbarButton>
+        )}
+        <span className="ml-1 tabular-nums text-neutral-700 sm:ml-3">
           {index + 1} / {slides.length}
         </span>
-        <span className="ml-3 truncate text-neutral-400">{slide.label}</span>
+        <span className="ml-3 hidden truncate text-neutral-400 md:inline">{slide.label}</span>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
           <ToolbarButton label="Slide précédente (←)" disabled={index === 0} onClick={() => goTo(index - 1)}>
@@ -269,12 +344,12 @@ export default function KeynoteDeck({ onExit }: { onExit: () => void }) {
           </ToolbarButton>
           <ToolbarButton label="Notes orateur (N)" pressed={notesOpen} onClick={() => setNotesOpen((open) => !open)}>
             <StickyNote />
-            Notes
+            <span className="hidden sm:inline">Notes</span>
             <Shortcut>N</Shortcut>
           </ToolbarButton>
           <ToolbarButton label="Plein écran (F)" pressed={isFullscreen} onClick={() => void toggleFullscreen()}>
             {isFullscreen ? <Minimize /> : <Maximize />}
-            Plein écran
+            <span className="hidden sm:inline">Plein écran</span>
             <Shortcut>F</Shortcut>
           </ToolbarButton>
         </div>

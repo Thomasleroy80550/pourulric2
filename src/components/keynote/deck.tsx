@@ -39,6 +39,7 @@ import {
   Wordmark,
 } from "./kit";
 import { investmentSlides } from "./investmentSection";
+import { remainingConnectionsSlide } from "./remainingConnections";
 import type { KeynoteSlide } from "./types";
 import { cn } from "@/lib/utils";
 
@@ -281,7 +282,17 @@ function PhotoTile({ index, label, principal }: { index: number; label: string; 
   );
 }
 
-function PhotoGrid({ title, delay, editable }: { title: string; delay: number; editable?: boolean }) {
+function PhotoGrid({
+  title,
+  delay,
+  editable,
+  pending,
+}: {
+  title: string;
+  delay: number;
+  editable?: boolean;
+  pending?: boolean;
+}) {
   return (
     <Reveal delay={delay} className="w-[330px] shrink-0">
       <Panel className="p-4">
@@ -291,6 +302,11 @@ function PhotoGrid({ title, delay, editable }: { title: string; delay: number; e
             <Chip className="px-2 py-1 text-[11px] text-hk-700">
               <Plus className="mr-1 h-3.5 w-3.5" aria-hidden />
               Ajouter
+            </Chip>
+          )}
+          {pending && (
+            <Chip className="border-orange-500/20 bg-orange-50 px-2 py-1 text-[11px] text-orange-700">
+              À connecter
             </Chip>
           )}
         </div>
@@ -308,35 +324,35 @@ function PhotosSlide() {
   return (
     <SlideFrame className="bg-white">
       <Glow className="right-[-160px] top-[180px] h-[500px] w-[620px]" />
-      <SlideHeader kicker="Autonomie" className="text-[46px]">
-        Vos photos, sous votre contrôle.
+      <SlideHeader kicker="À connecter" className="text-[46px]">
+        Bientôt : vos photos, sous votre contrôle.
       </SlideHeader>
       <div className="mt-6 grid min-h-0 flex-1 grid-cols-[390px_minmax(0,1fr)] gap-8">
         <Bullets
           className="mt-3 text-[19px]"
           items={[
-            "Voyez toutes les photos de votre logement",
-            "Ajoutez de nouvelles photos",
-            "Modifiez leurs étiquettes : chambre, salle de bain, vue…",
-            "Changez leur ordre par glisser-déposer",
-            "Votre choix est répercuté sur les annonces",
+            "Vous pourrez voir toutes les photos de votre logement",
+            "Ajouter de nouvelles photos",
+            "Modifier leurs étiquettes : chambre, salle de bain, vue…",
+            "Changer leur ordre par glisser-déposer",
+            "Répercuter vos choix sur les annonces",
           ]}
         />
         <div className="flex min-w-0 flex-col justify-center">
           <div className="flex items-center justify-center gap-5">
-            <PhotoGrid title="Votre sélection" delay={450} editable />
-            <FlowArrow label="Votre choix" delay={850} />
-            <PhotoGrid title="Sur l’annonce" delay={1050} />
+            <PhotoGrid title="Dans Cadence" delay={450} editable />
+            <FlowArrow label="Connexion" delay={850} />
+            <PhotoGrid title="Votre espace" delay={1050} pending />
           </div>
           <Reveal delay={1250}>
             <div className="mt-5 flex items-center justify-center gap-3 text-sm text-neutral-500">
               <Upload className="h-4 w-4 text-hk-600" aria-hidden />
-              Vous gérez les photos, les étiquettes et l’ordre, au même endroit.
+              Cadence sait déjà gérer les photos, les étiquettes et l’ordre.
             </div>
           </Reveal>
           <Reveal delay={1400}>
             <p className="mt-2 text-center text-sm leading-relaxed text-neutral-500">
-              Ce que vous choisissez ici est ce que les voyageurs voient.
+              La prochaine étape : connecter cette gestion à votre espace.
             </p>
           </Reveal>
         </div>
@@ -673,36 +689,43 @@ const ownerCapabilities = [
     icon: CalendarDays,
     title: "Vos réservations",
     text: "Dates, statut, canal, montant",
+    status: "available" as const,
   },
   {
     icon: Gauge,
-    title: "Prix et disponibilités",
-    text: "Jour par jour, jusqu’à 366 jours",
+    title: "Gestion des prix",
+    text: "Prix et disponibilités, jour par jour",
+    status: "connect" as const,
   },
   {
     icon: Lock,
-    title: "Vos dates perso",
-    text: "Bloquez-les, avec ou sans ménage",
+    title: "Blocages",
+    text: "Vos dates perso, avec ou sans ménage",
+    status: "connect" as const,
   },
   {
     icon: Camera,
-    title: "Ménages prouvés",
+    title: "Ménage",
     text: "Photos avant / après",
+    status: "connect" as const,
   },
   {
     icon: Star,
-    title: "Tous les avis",
-    text: "Sans exception",
+    title: "Avis voyageurs",
+    text: "Tous les avis de vos logements",
+    status: "connect" as const,
   },
   {
     icon: BellRing,
     title: "Alertes instantanées",
     text: "Réservation, modification, annulation",
+    status: "available" as const,
   },
   {
     icon: Banknote,
     title: "Payé automatiquement",
     text: "Reversement à J+1 du départ",
+    status: "available" as const,
     featured: true,
   },
 ];
@@ -711,19 +734,31 @@ function OwnerPortalSlide() {
   return (
     <SlideFrame>
       <Glow className="right-[-200px] top-[140px] h-[520px] w-[700px]" />
-      <SlideHeader kicker="Votre espace propriétaire" className="text-[44px]">
-        Tout voir, sans demander.
+      <SlideHeader kicker="Votre espace propriétaire" className="text-[42px]">
+        Disponible aujourd’hui. Connecté progressivement.
       </SlideHeader>
       <div className="mt-6 grid grid-cols-4 gap-3">
         {ownerCapabilities.map((capability, index) => (
           <Reveal key={capability.title} delay={350 + index * 130} className={cn(capability.featured && "col-span-2")}>
             <Panel
               className={cn(
-                "h-[136px] p-4",
+                "h-[148px] p-4",
                 capability.featured && "border-hk-500/25 bg-hk-50",
               )}
             >
-              <IconBadge icon={capability.icon} muted={!capability.featured} />
+              <div className="flex items-start justify-between gap-3">
+                <IconBadge icon={capability.icon} muted={!capability.featured} />
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-1 text-[11px] font-semibold",
+                    capability.status === "available"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-orange-50 text-orange-700",
+                  )}
+                >
+                  {capability.status === "available" ? "Disponible" : "À connecter"}
+                </span>
+              </div>
               <p className="mt-3 text-lg font-semibold leading-tight text-neutral-900">{capability.title}</p>
               <p className={cn("mt-1 text-sm leading-snug", capability.featured ? "text-hk-700" : "text-neutral-500")}>
                 {capability.text}
@@ -734,18 +769,18 @@ function OwnerPortalSlide() {
       </div>
       <div className="mt-6 grid grid-cols-[1fr_auto] items-end gap-8">
         <Reveal delay={1250}>
-          <div className="flex items-center gap-8">
+          <div className="flex items-start gap-10">
             <div>
-              <p className="text-4xl font-semibold tracking-[-0.04em] text-neutral-950">366 jours</p>
-              <p className="mt-1 text-sm text-neutral-500">de calendrier consultable</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Déjà dans votre espace</p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">
+                Réservations · Alertes · Reversement
+              </p>
             </div>
             <div>
-              <p className="text-4xl font-semibold tracking-[-0.04em] text-neutral-950">5 min</p>
-              <p className="mt-1 text-sm text-neutral-500">de validité des liens photos</p>
-            </div>
-            <div>
-              <p className="text-4xl font-semibold tracking-[-0.04em] text-neutral-950">0</p>
-              <p className="mt-1 text-sm text-neutral-500">coordonnée voyageur exposée</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-700">Connexion priorisée</p>
+              <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">
+                Avis · Ménage · Blocages · Prix · Photos
+              </p>
             </div>
           </div>
         </Reveal>
@@ -936,7 +971,7 @@ function ClosingSlide() {
       </Reveal>
       <Reveal delay={800}>
         <p className="mt-9 text-[24px] font-medium text-neutral-600">
-          Hello Keys gère avec Cadence. Vous suivez tout depuis votre espace.
+          Hello Keys gère avec Cadence. Vous voyez l’essentiel, et la suite se connecte.
         </p>
       </Reveal>
       <Reveal delay={1050}>
@@ -1007,10 +1042,10 @@ export const keynoteSlides: KeynoteSlide[] = [
     label: "Photos des annonces",
     Component: PhotosSlide,
     notes: [
-      "Vous pouvez voir toutes les photos de votre logement, en ajouter de nouvelles, modifier leurs étiquettes et changer leur ordre. Tout se fait depuis le même écran, sans demande à Hello Keys.",
+      "Cadence sait déjà gérer les photos des annonces : voir les images, en ajouter, modifier leurs étiquettes et changer leur ordre.",
       "La première photo est choisie en un clic. Les autres se réorganisent par glisser-déposer. Vous pouvez indiquer ce que montre chaque image : chambre, salle de bain, vue, cuisine.",
-      "Quand vous enregistrez, votre choix est répercuté sur les annonces. La photo principale et l’ordre affiché aux voyageurs suivent votre sélection.",
-      "L’avantage est direct : votre annonce reste à jour, plus claire et plus attractive, sans échange ni délai.",
+      "Ce qui reste à faire, c’est la connexion de cette gestion à votre espace propriétaire. L’objectif est simple : vous pourrez préparer votre sélection, et vos choix seront répercutés sur les annonces.",
+      "L’avantage est direct : votre annonce restera à jour, plus claire et plus attractive, sans échange ni délai.",
     ],
     transition: "L’annonce est belle et visible. Le voyageur écrit maintenant : il faut répondre vite et au bon endroit.",
   },
@@ -1061,53 +1096,53 @@ export const keynoteSlides: KeynoteSlide[] = [
       "C’est le rôle de votre espace propriétaire. Il vous donne accès aux informations de vos logements, et uniquement à celles-ci.",
       "Le principe est simple : Cadence gère, vous voyez. Vous n’appelez plus pour demander une nouvelle : elle est déjà là.",
     ],
-    transition: "Voici les sept capacités de votre espace.",
+    transition: "Voici ce qui est disponible dans votre espace, et ce qui reste à connecter.",
   },
   {
     id: "espace-proprietaire",
     label: "Espace propriétaire",
     Component: OwnerPortalSlide,
     notes: [
-      "Votre espace propriétaire rassemble sept capacités. Vos réservations : dates, statut, canal, référence et montant du séjour, sans jamais exposer les coordonnées des voyageurs. Vos prix et disponibilités : jour par jour, jusqu’à trois cent soixante-six jours.",
-      "Vos dates personnelles : vous pouvez les bloquer, avec ou sans demande de ménage. Vos ménages : interventions, statuts, pièces et photos avant et après. Tous vos avis, sans exception. Une alerte à chaque réservation, modification ou annulation. Et enfin, votre reversement automatique.",
+      "Votre espace propriétaire vous donne déjà accès aux réservations, aux alertes et au reversement. C’est la première étape de la transparence.",
+      "Les autres blocs sont connectés progressivement. Nous avons priorisé les avis, le ménage, les blocages, la gestion des prix et la gestion des photos des annonces.",
       "L’objectif n’est pas de vous montrer de la technique. L’objectif est de vous éviter des questions : vous savez ce qui est réservé, ce qui est fait et ce qui vous sera versé.",
       "La transparence n’est plus une promesse : elle est affichée.",
     ],
-    transition: "Six de ces capacités vous informent. La septième concerne votre argent.",
+    transition: "Avant de parler argent, voyons ce qui est déjà disponible et ce qui reste à connecter.",
     cheatSheet: [
       {
         capacity: "Réservations",
-        source: "Votre espace",
+        source: "Disponible",
         say: "Dates, statut, canal, référence et montant du séjour. Ni coordonnées voyageurs, ni données de paiement.",
       },
       {
-        capacity: "Prix et disponibilités",
-        source: "Calendrier",
-        say: "Consultation jour par jour, jusqu’à 366 jours, avec les prix et les blocages.",
+        capacity: "Gestion des prix",
+        source: "À connecter",
+        say: "La gestion des prix et des disponibilités fait partie des blocs priorisés.",
       },
       {
-        capacity: "Blocage de dates",
-        source: "Calendrier",
-        say: "Vous bloquez vos dates personnelles, avec ou sans demande de ménage, sans risque de doublon.",
+        capacity: "Blocages",
+        source: "À connecter",
+        say: "Les dates personnelles pourront être bloquées depuis votre espace, avec ou sans demande de ménage.",
       },
       {
-        capacity: "Ménages",
-        source: "Ménage",
-        say: "Interventions, statuts, pièces et photos. Les liens photos expirent après 5 minutes.",
+        capacity: "Ménage",
+        source: "À connecter",
+        say: "Les interventions et les photos avant / après feront partie des blocs priorisés.",
       },
       {
         capacity: "Avis",
-        source: "Avis",
-        say: "Tous les avis sont consultables, sans plafond artificiel.",
+        source: "À connecter",
+        say: "Tous les avis voyageurs seront consultables depuis votre espace.",
       },
       {
         capacity: "Alertes",
-        source: "Notifications",
+        source: "Disponible",
         say: "Vous êtes informé à chaque réservation, modification ou annulation.",
       },
       {
         capacity: "Paiement",
-        source: "Reversements",
+        source: "Disponible",
         say: "Le reversement part automatiquement à J+1 du départ, détaillé sur la slide suivante.",
       },
     ],
@@ -1135,17 +1170,18 @@ export const keynoteSlides: KeynoteSlide[] = [
       "Pour les paiements, l’identité et les coordonnées bancaires sont vérifiées par Stripe. Le bénéficiaire est figé au moment du paiement.",
       "Et surtout : zéro coordonnée voyageur n’est exposée au propriétaire. Vous avez la visibilité, sans compromettre la confidentialité.",
     ],
-    transition: "Il reste une phrase pour résumer cette approche.",
+    transition: "Avant de conclure, regardons précisément ce qui reste à connecter à votre espace.",
   },
+  remainingConnectionsSlide,
   {
     id: "conclusion",
     label: "Conclusion",
     Component: ClosingSlide,
     notes: [
-      "Revenons à vos questions de départ. Est-ce loué ? Vous le voyez. Le ménage est-il fait ? Les photos le montrent. Qu’ont pensé les voyageurs ? Les avis sont là. Quand part votre reversement ? À J+1 du départ.",
-      "Pendant ce temps, Cadence aide Hello Keys à gérer plus vite : promotions, photos, messages, diffusion, cautions, reversements et sauvegardes.",
-      "C’est cela que nous avons voulu construire : une gestion plus réactive côté Hello Keys, et une information plus claire côté propriétaire. Vous n’avez plus besoin de demander pour savoir.",
-      "Hello Keys gère avec Cadence. Vous suivez tout depuis votre espace.",
+      "Revenons à vos questions de départ. Est-ce loué ? Vous le voyez. Quand part votre reversement ? À J+1 du départ. Une réservation change ? Vous êtes alerté.",
+      "Pendant ce temps, Cadence fait déjà fonctionner les opérations : promotions, photos, messages, diffusion, cautions, reversements et sauvegardes. La prochaine étape est de connecter les blocs prioritaires à votre espace.",
+      "C’est cela que nous avons voulu construire : une gestion plus réactive côté Hello Keys, et une information plus claire côté propriétaire. Vous savez ce qui est disponible, et ce qui arrive.",
+      "Hello Keys gère avec Cadence. Vous voyez l’essentiel, et la suite se connecte.",
       "La confiance n’est plus déclarée : elle est affichée. Merci.",
     ],
     transition: "Fin de la keynote. Laisser le slogan à l’écran pendant les questions.",

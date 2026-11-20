@@ -193,26 +193,32 @@ const ownerBenefits = [
   {
     icon: CalendarDays,
     text: "Vos réservations en direct, sans nous appeler",
+    status: "available" as const,
   },
   {
     icon: BellRing,
     text: "Notification à chaque réservation, modification ou annulation",
+    status: "available" as const,
   },
   {
     icon: Banknote,
     text: "Vos revenus reversés automatiquement à J+1 du départ",
+    status: "available" as const,
   },
   {
     icon: Camera,
     text: "Chaque ménage prouvé par photos avant/après",
+    status: "connect" as const,
   },
   {
     icon: Star,
     text: "Tous les avis voyageurs de vos logements, en intégralité",
+    status: "connect" as const,
   },
   {
     icon: Lock,
     text: "Vos dates personnelles bloquées par vous, en autonomie",
+    status: "connect" as const,
   },
 ];
 
@@ -221,13 +227,23 @@ function OwnerBenefitsSlide() {
     <SlideFrame>
       <Glow className="right-[-220px] top-[120px] h-[520px] w-[700px]" />
       <SlideHeader kicker="Pour vous, concrètement" className="text-[44px]">
-        Ce que ça change pour vous.
+        Ce que cet investissement rend possible.
       </SlideHeader>
       <div className="mt-9 grid grid-cols-3 gap-4">
         {ownerBenefits.map((benefit, index) => (
           <Reveal key={benefit.text} delay={350 + index * 130}>
             <Panel className="flex h-[168px] flex-col justify-between p-5">
-              <IconBadge icon={benefit.icon} />
+              <div className="flex items-start justify-between gap-3">
+                <IconBadge icon={benefit.icon} />
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-1 text-[11px] font-semibold",
+                    benefit.status === "available" ? "bg-emerald-50 text-emerald-700" : "bg-orange-50 text-orange-700",
+                  )}
+                >
+                  {benefit.status === "available" ? "Disponible" : "À connecter"}
+                </span>
+              </div>
               <p className="text-[21px] font-semibold leading-snug tracking-[-0.02em] text-neutral-900">
                 {benefit.text}
               </p>
@@ -314,8 +330,8 @@ export const investmentSlides: KeynoteSlide[] = [
     Component: OwnerBenefitsSlide,
     notes: [
       "Chaque euro et chaque heure investis tiennent dans cette liste. C’est ça, le retour sur investissement : le vôtre.",
-      "Vous voyez vos réservations, vous êtes notifié, vous suivez vos revenus, vous avez la preuve des ménages, vous lisez tous les avis et vous bloquez vos dates personnelles en autonomie.",
-      "C’est là que l’investissement devient concret.",
+      "Aujourd’hui, vous voyez déjà vos réservations, vos alertes et vos reversements. Les autres blocs — ménage, avis et dates personnelles — sont priorisés pour la connexion à votre espace.",
+      "C’est là que l’investissement devient concret : il rend ces capacités possibles, puis les amène vers vous.",
     ],
     transition: "Et ce n’est pas fini.",
   },

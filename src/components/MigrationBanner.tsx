@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarDays, CheckCircle2, Info, Wrench } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, Sparkles, Wrench } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Dialog,
@@ -13,26 +13,50 @@ import { useReopened } from "@/lib/migration-api";
 export default function MigrationBanner() {
   const reopened = useReopened();
 
+  // Migration terminée : le bandeau du haut met en avant la keynote Cadence.
+  if (reopened) {
+    return (
+      <aside
+        aria-label="Keynote de présentation Cadence"
+        className="relative z-50 w-full border-b border-hk-700 bg-gradient-to-r from-hk-700 via-hk-600 to-hk-700 px-3 py-1.5 text-white print:hidden"
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 text-xs leading-5 sm:gap-3 sm:text-sm">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <p
+            className="min-w-0 truncate"
+            title="Nouveau : Cadence, la plateforme développée par Hello Keys — découvrez la keynote de présentation (~10 min)."
+          >
+            <strong>Nouveau : Cadence</strong>, la plateforme développée par Hello Keys — votre location, en toute confiance.
+          </p>
+          <Link
+            to="/keynote"
+            className="shrink-0 rounded-sm font-bold underline decoration-white/60 underline-offset-4 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-hk-600"
+          >
+            Regarder la keynote
+          </Link>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <Dialog>
       <aside
         aria-label="Information sur la migration du logiciel"
-        className={`relative z-50 w-full border-b px-3 py-1.5 text-white print:hidden ${reopened ? "border-emerald-800 bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-800" : "border-red-800 bg-gradient-to-r from-red-800 via-red-700 to-red-800"}`}
+        className="relative z-50 w-full border-b border-red-800 bg-gradient-to-r from-red-800 via-red-700 to-red-800 px-3 py-1.5 text-white print:hidden"
       >
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 text-xs leading-5 sm:gap-3 sm:text-sm">
-          {reopened ? <Info className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <p
             className="min-w-0 truncate"
-            title={reopened ? "Réouverture effectuée : le canal Abritel reste en cours d'activation (finalisation prévue lundi)." : "Maintenance en cours : transfert des données, support client et plateforme propriétaire indisponibles."}
+            title="Maintenance en cours : transfert des données, support client et plateforme propriétaire indisponibles."
           >
-            {reopened
-              ? <><strong>Réouverture effectuée</strong> : le canal Abritel reste en cours d’activation (finalisation prévue lundi).</>
-              : <><strong>Maintenance en cours</strong> : transfert des données, support client et plateforme propriétaire indisponibles.</>}
+            <strong>Maintenance en cours</strong> : transfert des données, support client et plateforme propriétaire indisponibles.
           </p>
           <DialogTrigger asChild>
             <button
               type="button"
-              className={`shrink-0 rounded-sm font-bold underline decoration-white/60 underline-offset-4 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ${reopened ? "focus-visible:ring-offset-emerald-700" : "focus-visible:ring-offset-red-700"}`}
+              className="shrink-0 rounded-sm font-bold underline decoration-white/60 underline-offset-4 transition-colors hover:text-white/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-red-700"
             >
               En savoir plus
             </button>
@@ -48,52 +72,26 @@ export default function MigrationBanner() {
           </DialogDescription>
         </DialogHeader>
 
-        {reopened ? (
-          <section className="space-y-3 rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-600 p-4 text-white sm:p-5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-              Réouverture effectuée
-            </h2>
-            <p className="text-sm text-emerald-100">La migration est terminée : votre espace propriétaire et vos annonces sont de nouveau accessibles. Merci pour votre patience pendant cette transition.</p>
-          </section>
-        ) : (
-          <section className="space-y-3 rounded-xl bg-gradient-to-br from-red-800 to-red-600 p-4 text-white sm:p-5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <Wrench className="h-4 w-4" aria-hidden="true" />
-              Maintenance en cours
-            </h2>
-            <p className="text-sm text-red-100">Le transfert des données a commencé. La progression et les étapes de la migration sont affichées directement sur la page de maintenance et mises à jour par notre équipe.</p>
-          </section>
-        )}
+        <section className="space-y-3 rounded-xl bg-gradient-to-br from-red-800 to-red-600 p-4 text-white sm:p-5">
+          <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <Wrench className="h-4 w-4" aria-hidden="true" />
+            Maintenance en cours
+          </h2>
+          <p className="text-sm text-red-100">Le transfert des données a commencé. La progression et les étapes de la migration sont affichées directement sur la page de maintenance et mises à jour par notre équipe.</p>
+        </section>
 
-        <section className={`space-y-3 rounded-lg border p-4 text-sm ${reopened ? "border-amber-200 bg-amber-50 text-amber-950" : "border-red-200 bg-red-50 text-red-950"}`}>
+        <section className="space-y-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">
           <h2 className="flex items-center gap-2 font-bold">
             <CalendarDays className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {reopened ? "Canal Abritel en cours d’activation" : "Migration du 16 au 19 novembre"}
+            Migration du 16 au 19 novembre
           </h2>
-          {reopened ? (
-            <>
-              <p>L’onboarding de vos logements se poursuit côté Abritel, avec une finalisation prévue <strong>lundi 23 novembre</strong>.</p>
-              <ul className="list-disc space-y-1.5 pl-5">
-                <li><strong>Vos annonces ne sont pas encore diffusées sur Abritel</strong> pendant cette activation.</li>
-                <li>Tous les autres canaux de réservation sont opérationnels.</li>
-                <li>L’avancement reste visible sur la page de suivi de la migration.</li>
-              </ul>
-              <Link to="/migration" className="inline-flex items-center gap-1 font-semibold text-amber-900 underline decoration-amber-400 underline-offset-4 hover:text-amber-700">
-                Suivre l’activation en direct
-              </Link>
-            </>
-          ) : (
-            <>
-              <p>Nos équipes seront principalement mobilisées pour le transfert de toutes les données vers notre nouveau logiciel.</p>
-              <ul className="list-disc space-y-1.5 pl-5">
-                <li><strong>Aucun support client ne sera assuré</strong> pendant cette période.</li>
-                <li><strong>La plateforme propriétaire sera indisponible</strong> pendant le transfert.</li>
-                <li>Le statut du transfert sera visible sur la plateforme.</li>
-              </ul>
-              <p>Merci pour votre patience et votre compréhension durant cette transition.</p>
-            </>
-          )}
+          <p>Nos équipes seront principalement mobilisées pour le transfert de toutes les données vers notre nouveau logiciel.</p>
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li><strong>Aucun support client ne sera assuré</strong> pendant cette période.</li>
+            <li><strong>La plateforme propriétaire sera indisponible</strong> pendant le transfert.</li>
+            <li>Le statut du transfert sera visible sur la plateforme.</li>
+          </ul>
+          <p>Merci pour votre patience et votre compréhension durant cette transition.</p>
         </section>
 
         <article className="space-y-4 text-sm leading-relaxed text-muted-foreground">

@@ -172,13 +172,7 @@ function PromiseSlide() {
   );
 }
 
-const channelPromotions = [
-  { name: "Booking.com", code: "BOO142" },
-  { name: "Airbnb", code: "AIR298" },
-  { name: "Expedia", code: "EXP270" },
-  { name: "Vrbo", code: "HOM143" },
-  { name: "Marriott", code: "MAR392" },
-];
+const channelPromotions = ["Booking.com", "Airbnb", "Expedia", "Vrbo", "Marriott"];
 
 const promotionSteps = [
   "Choisissez le canal de diffusion",
@@ -213,16 +207,13 @@ function PromotionSlide() {
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-neutral-500">Cinq canaux possibles</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {channelPromotions.map((channel) => (
-                  <Chip key={channel.code}>
-                    {channel.name}
-                    <span className="ml-2 font-mono text-[11px] text-hk-700">{channel.code}</span>
-                  </Chip>
+                  <Chip key={channel}>{channel}</Chip>
                 ))}
               </div>
-              <p className="mt-6 text-sm font-semibold uppercase tracking-[0.22em] text-neutral-500">Types d’offre réels</p>
+              <p className="mt-6 text-sm font-semibold uppercase tracking-[0.22em] text-neutral-500">Types d’offre</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Chip>Dernière minute · seuil en heures</Chip>
-                <Chip>Early bird</Chip>
+                <Chip>Dernière minute</Chip>
+                <Chip>Réservation anticipée</Chip>
                 <Chip>Dates de séjour</Chip>
               </div>
             </Panel>
@@ -437,7 +428,7 @@ function MessagesSlide() {
   return (
     <SlideFrame>
       <Glow className="left-[420px] top-[-180px] h-[500px] w-[700px]" />
-      <SlideHeader kicker="Preuve 3" className="text-[46px]">
+      <SlideHeader kicker="Messages voyageurs" className="text-[46px]">
         Chaque message voyageur trouve sa réponse.
       </SlideHeader>
       <div className="mt-6 grid min-h-0 flex-1 grid-cols-[410px_minmax(0,1fr)] gap-8">
@@ -518,14 +509,14 @@ function MultichannelSlide() {
       <div className="mt-8 grid min-h-0 flex-1 grid-cols-[360px_minmax(0,1fr)] gap-10">
         <div>
           <Reveal delay={400}>
-            <BigFigure value="~3 min" caption="verdict observé pour une activation multi-canal" />
+            <BigFigure value="~3 min" caption="pour activer la diffusion sur plusieurs canaux" />
           </Reveal>
           <Bullets
             className="mt-8 text-[19px]"
             items={[
               "Airbnb, Booking et Abritel peuvent être activés ensemble",
               "Le statut de diffusion est suivi automatiquement",
-              "Le verdict est observé en environ 3 minutes",
+              "Le résultat est visible en quelques minutes",
               "Les erreurs sont expliquées clairement",
             ]}
           />
@@ -562,7 +553,7 @@ function MultichannelSlide() {
               <Chip>Suivi automatique</Chip>
               <Chip>
                 <Clock3 className="mr-1.5 h-3.5 w-3.5 text-hk-600" aria-hidden />
-                Verdict en ~3 min
+                Résultat en ~3 min
               </Chip>
             </div>
           </Reveal>
@@ -778,7 +769,7 @@ function OwnerPortalSlide() {
               </p>
             </div>
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-700">Connexion priorisée</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-700">Bientôt dans votre espace</p>
               <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">
                 Avis · Ménage · Blocages · Prix · Photos
               </p>
@@ -836,7 +827,7 @@ function MoneySlide() {
               <Panel className="p-5">
                 <p className="text-lg font-semibold">Jamais deux fois le même virement</p>
                 <p className="mt-2 text-sm leading-relaxed text-neutral-500">
-                  Verrou, groupe de transfert unique et rapprochement Stripe.
+                  Un contrôle automatique empêche tout doublon.
                 </p>
               </Panel>
             </Reveal>
@@ -860,7 +851,7 @@ function MoneySlide() {
               <Chip>Virement vers votre compte</Chip>
               <Chip>
                 <Clock3 className="mr-1.5 h-3.5 w-3.5 text-hk-600" aria-hidden />
-                contrôle régulier
+                Contrôle régulier
               </Chip>
             </div>
           </Reveal>
@@ -1150,14 +1141,14 @@ export const keynoteSlides: KeynoteSlide[] = [
       title: "Votre logement diffusé sur plusieurs canaux, en une fois.",
       bullets: [
         "Airbnb, Booking et Abritel activés ensemble",
-        "Statut suivi automatiquement, verdict en ~3 minutes",
+        "Statut suivi automatiquement, résultat en ~3 minutes",
         "Si un canal refuse, la raison est expliquée clairement",
       ],
       footnote: "Votre logement est diffusé plus vite, avec moins de manipulations.",
     },
     notes: [
       "Mettre un logement en ligne sur plusieurs plateformes peut vite devenir répétitif. Cadence permet d’activer Airbnb, Booking et Abritel ensemble.",
-      "Ensuite, le statut de diffusion est suivi automatiquement. Le verdict arrive en quelques minutes, avec un délai observé d’environ trois minutes.",
+      "Ensuite, le statut de diffusion est suivi automatiquement. Le résultat arrive en quelques minutes, environ trois minutes observées en pratique.",
       "Si une plateforme refuse une annonce, la raison est expliquée clairement. L’équipe sait ainsi quoi corriger, sans chercher à décoder un message technique.",
       "L’avantage pour vous : votre logement est diffusé plus vite, avec moins de manipulations et une meilleure visibilité sur l’état d’avancement.",
     ],

@@ -12,6 +12,7 @@ import {
   Eye,
   FileText,
   Gauge,
+  Heart,
   Image as ImageIcon,
   Images,
   KeyRound,
@@ -979,8 +980,27 @@ function ClosingSlide() {
           Explorez votre espace propriétaire
         </div>
       </Reveal>
-      <Reveal delay={1200}>
-        <div className="mt-10">
+      <Reveal delay={1250}>
+        <div className="mt-10 flex flex-col items-center">
+          <div className="flex items-center gap-3" aria-hidden>
+            <span className="h-px w-20 bg-gradient-to-r from-transparent to-hk-300" />
+            <Heart className="h-5 w-5 fill-hk-500 text-hk-500" />
+            <span className="h-px w-20 bg-gradient-to-l from-transparent to-hk-300" />
+          </div>
+          <p className="mt-4 text-[26px] font-medium italic tracking-[-0.01em] text-neutral-700">
+            Merci à tous pour votre confiance
+          </p>
+          <p className="mt-2 text-lg font-semibold tracking-[0.12em]">
+            <span className="bg-gradient-to-r from-hk-700 to-hk-500 bg-clip-text text-transparent">Thomas</span>
+            <span className="mx-2 text-neutral-300">·</span>
+            <span className="bg-gradient-to-r from-hk-700 to-hk-500 bg-clip-text text-transparent">Fiona</span>
+            <span className="mx-2 text-neutral-300">·</span>
+            <span className="bg-gradient-to-r from-hk-700 to-hk-500 bg-clip-text text-transparent">Mathilde</span>
+          </p>
+        </div>
+      </Reveal>
+      <Reveal delay={1450}>
+        <div className="mt-8">
           <Wordmark />
         </div>
       </Reveal>
@@ -1182,7 +1202,7 @@ export const keynoteSlides: KeynoteSlide[] = [
       "Pendant ce temps, Cadence fait déjà fonctionner les opérations : promotions, photos, messages, diffusion, cautions, reversements et sauvegardes. La prochaine étape est de connecter les blocs prioritaires à votre espace.",
       "C’est cela que nous avons voulu construire : une gestion plus réactive côté Hello Keys, et une information plus claire côté propriétaire. Vous savez ce qui est disponible, et ce qui arrive.",
       "Hello Keys gère avec Cadence. Vous voyez l’essentiel, et la suite se connecte.",
-      "La confiance n’est plus déclarée : elle est affichée. Merci.",
+      "La confiance n’est plus déclarée : elle est affichée. Merci à tous pour votre confiance — Thomas, Fiona et Mathilde.",
     ],
     transition: "Fin de la keynote. Laisser le slogan à l’écran pendant les questions.",
   },

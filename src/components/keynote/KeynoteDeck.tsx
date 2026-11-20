@@ -46,6 +46,20 @@ function Shortcut({ children }: { children: string }) {
   );
 }
 
+// Aligné sur le point de rupture md de Tailwind (767px).
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobile(media.matches);
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return isMobile;
+}
+
 function NavigationArrow({
   direction,
   disabled,
@@ -79,10 +93,15 @@ function NavigationArrow({
 export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const mobileContentRef = useRef<HTMLDivElement>(null);
+  const mobileFitRef = useRef({ scale: 1, height: 0 });
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [scale, setScale] = useState(1);
+  const [mobileFit, setMobileFit] = useState({ scale: 1, height: 0 });
   const [notesOpen, setNotesOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [hintVisible, setHintVisible] = useState(true);
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // L'URL porte la slide courante : un rechargement ou un lien partagé retombe au même endroit.
@@ -123,6 +142,38 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
     observer.observe(host);
     return () => observer.disconnect();
   }, []);
+
+  // Mobile : la slide est mesurée puis réduite juste assez pour tenir dans l'écran, sans scroll.
+  useLayoutEffect(() => {
+    if (!isMobile) return;
+    const host = hostRef.current;
+    const content = mobileContentRef.current;
+    if (!host || !content) return;
+
+    const fit = () => {
+      const naturalHeight = content.offsetHeight;
+      const available = host.clientHeight;
+      if (!naturalHeight || !available) return;
+      const nextScale = Math.min(1, available / naturalHeight);
+      const nextHeight = Math.round(naturalHeight * nextScale);
+      const previous = mobileFitRef.current;
+      if (Math.abs(previous.scale - nextScale) < 0.005 && Math.abs(previous.height - nextHeight) < 2) return;
+      const next = { scale: nextScale, height: nextHeight };
+      mobileFitRef.current = next;
+      setMobileFit(next);
+    };
+
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(host);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [isMobile, index]);
+
+  // L'indication tactile disparaît dès la première navigation.
+  useEffect(() => {
+    if (index !== 0) setHintVisible(false);
+  }, [index]);
 
   useEffect(() => {
     const sync = () => setIsFullscreen(document.fullscreenElement === rootRef.current);
@@ -207,26 +258,49 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
     >
       <div
         ref={hostRef}
-        className="relative min-h-0 flex-1 overflow-hidden max-md:overflow-y-auto"
+        className="relative min-h-0 flex-1 overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <div
-          role="group"
-          aria-roledescription="slide"
-          aria-label={`Slide ${index + 1} sur ${slides.length} : ${slide.label}`}
-          className="keynote-stage absolute left-1/2 top-1/2"
-          style={{
-            width: STAGE_WIDTH,
-            height: STAGE_HEIGHT,
-            transform: `translate(-50%, -50%) scale(${scale})`,
-          }}
-        >
-          {/* La clé rejoue les animations d'entrée à chaque changement de slide. */}
-          <div key={slide.id} className="h-full w-full animate-in fade-in duration-500 motion-reduce:animate-none">
-            <Slide />
+        {isMobile ? (
+          <div className="flex h-full w-full items-center justify-center overflow-hidden">
+            <div className="w-full" style={{ height: mobileFit.height || undefined }}>
+              <div
+                ref={mobileContentRef}
+                role="group"
+                aria-roledescription="slide"
+                aria-label={`Slide ${index + 1} sur ${slides.length} : ${slide.label}`}
+                className="keynote-stage w-full"
+                style={{
+                  transform: `scale(${mobileFit.scale})`,
+                  transformOrigin: "top center",
+                }}
+              >
+                {/* La clé rejoue les animations d'entrée à chaque changement de slide. */}
+                <div key={slide.id} className="animate-in fade-in duration-500 motion-reduce:animate-none">
+                  <Slide />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            role="group"
+            aria-roledescription="slide"
+            aria-label={`Slide ${index + 1} sur ${slides.length} : ${slide.label}`}
+            className="keynote-stage absolute left-1/2 top-1/2"
+            style={{
+              width: STAGE_WIDTH,
+              height: STAGE_HEIGHT,
+              transform: `translate(-50%, -50%) scale(${scale})`,
+            }}
+          >
+            {/* La clé rejoue les animations d'entrée à chaque changement de slide. */}
+            <div key={slide.id} className="h-full w-full animate-in fade-in duration-500 motion-reduce:animate-none">
+              <Slide />
+            </div>
+          </div>
+        )}
         <div className="absolute inset-x-0 bottom-0 h-0.5 bg-black/[0.05] max-md:hidden">
           <div
             className="h-full bg-hk-500 transition-[width] duration-500"
@@ -235,9 +309,11 @@ export default function KeynoteDeck({ onExit }: { onExit?: () => void }) {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/85 px-3 py-1.5 text-xs font-medium text-neutral-500 shadow-sm backdrop-blur-xl md:hidden">
-        Glissez ou utilisez les flèches
-      </div>
+      {hintVisible && (
+        <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/85 px-3 py-1.5 text-xs font-medium text-neutral-500 shadow-sm backdrop-blur-xl md:hidden">
+          Glissez ou utilisez les flèches
+        </div>
+      )}
 
       {!notesOpen && (
         <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-20 flex items-center px-3 sm:px-5">

@@ -86,6 +86,7 @@ import AdminNotificationsPage from "./pages/AdminNotificationsPage";
 import AdminBillingStatusPage from "./pages/AdminBillingStatusPage";
 import AdminConsumablesPage from "./pages/AdminConsumablesPage";
 import AdminKeyBoardPage from "./pages/AdminKeyBoardPage";
+import AdminKeynotePage from "./pages/AdminKeynotePage";
 import RedeemInvitePage from './pages/RedeemInvitePage';
 import JoinSharedSpacePage from './pages/JoinSharedSpacePage';
 import SpaceSelectionPage from './pages/SpaceSelectionPage';
@@ -270,6 +271,7 @@ function App() {
                       <Route path="/admin/billing-status" element={<AdminBillingStatusPage />} /> {/* New route */}
                       <Route path="/admin/consumables" element={<AdminConsumablesPage />} />
                       <Route path="/admin/key-board" element={<AdminKeyBoardPage />} />
+                      <Route path="/admin/keynote" element={<AdminKeynotePage />} />
                       <Route path="/admin/client-performance" element={<AdminClientPerformancePage />} /> {/* New route */}
                       <Route path="/admin/utility-cuts" element={<AdminUtilityCutsPage />} /> {/* New route */}
                       <Route path="/admin/revyoos-missing" element={<AdminRevyoosMissingPage />} />

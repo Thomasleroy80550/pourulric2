@@ -22,7 +22,7 @@ function todayIso() {
   return format(new Date(), "yyyy-MM-dd");
 }
 
-export default function ChannelCalendarPanel({ assignmentId }: { assignmentId: string }) {
+export default function ChannelCalendarPanel({ assignmentId, refreshKey = 0 }: { assignmentId: string; refreshKey?: number }) {
   const [from, setFrom] = useState(todayIso);
   const [to, setTo] = useState(() => format(addDays(new Date(), 31), "yyyy-MM-dd"));
   const [calendar, setCalendar] = useState<ChannelCalendar | null>(null);
@@ -49,7 +49,7 @@ export default function ChannelCalendarPanel({ assignmentId }: { assignmentId: s
     } finally {
       setLoading(false);
     }
-  }, [assignmentId, from, to, validPeriod]);
+  }, [assignmentId, from, to, validPeriod, refreshKey]);
 
   useEffect(() => {
     setCalendar(null);

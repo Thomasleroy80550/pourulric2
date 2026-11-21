@@ -89,7 +89,7 @@ async function assignmentForOwnerWrite(db: SupabaseClient, assignmentId: unknown
     .eq("client_profile_id", userId)
     .maybeSingle();
   if (error) throw error;
-  if (!data) throw new ChannelFeatureError(403, "Seul le profil actuellement attribué peut créer un séjour propriétaire.");
+  if (!data) throw new ChannelFeatureError(403, "Seul le profil actuellement attribué peut effectuer cette modification.");
   return data as Assignment;
 }
 
@@ -174,6 +174,77 @@ async function currentPropertyImages(assignment: Assignment): Promise<string[]> 
 
 function samePhotoSet(current: string[], requested: string[]) {
   return current.length === requested.length && new Set(current).size === current.length && current.every(url => requested.includes(url));
+}
+
+function parisToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function parisDatePlusYears(years: number) {
+  const [year, month, day] = parisToday().split("-").map(Number);
+  const date = new Date(Date.UTC(year + years, month - 1, day));
+  return date.toISOString().slice(0, 10);
+}
+
+function pricingError(index: number, message: string): never {
+  throw new ChannelFeatureError(400, `periods[${index}] : ${message}`);
+}
+
+function validatePricingPeriods(value: unknown) {
+  if (!Array.isArray(value) || value.length > 500) {
+    throw new ChannelFeatureError(400, "periods : liste complète des périodes tarifaires du propriétaire attendue");
+  }
+  const today = parisToday();
+  const maxStart = parisDatePlusYears(3);
+  const periods = value.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) pricingError(index, "objet de période invalide");
+    const period = item as Record<string, unknown>;
+    if (!validDate(period.start_date) || !validDate(period.end_date)) pricingError(index, "dates YYYY-MM-DD valides requises");
+    if (period.start_date > period.end_date) pricingError(index, "start_date doit être avant ou égale à end_date");
+    if (period.end_date < today || period.start_date > maxStart) pricingError(index, "Périodes à venir uniquement, avec début dans les 3 ans");
+    if (typeof period.price !== "number" || !Number.isFinite(period.price) || period.price < 0 || period.price > 100000) pricingError(index, "price doit être un prix par nuit entre 0 et 100 000");
+    const minStay = period.min_stay == null ? 1 : period.min_stay;
+    if (typeof minStay !== "number" || !Number.isInteger(minStay) || minStay < 1 || minStay > 365) pricingError(index, "min_stay doit être un entier entre 1 et 365");
+    if (period.max_stay != null && (typeof period.max_stay !== "number" || !Number.isSafeInteger(period.max_stay) || period.max_stay < minStay)) pricingError(index, "max_stay doit être un entier supérieur ou égal à min_stay");
+    if (period.label != null && (typeof period.label !== "string" || period.label.trim().length > 60)) pricingError(index, "label : 60 caractères maximum");
+    return {
+      start_date: period.start_date,
+      end_date: period.end_date,
+      price: period.price,
+      min_stay: minStay,
+      ...(period.max_stay != null ? { max_stay: period.max_stay } : {}),
+      ...(typeof period.label === "string" && period.label.trim() ? { label: period.label.trim() } : {}),
+    };
+  }).sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
+  for (let index = 1; index < periods.length; index += 1) {
+    if (periods[index].start_date <= periods[index - 1].end_date) {
+      throw new ChannelFeatureError(400, "Deux périodes se chevauchent. Corrigez la liste complète avant envoi.");
+    }
+  }
+  return periods;
+}
+
+function validatePricingResponse(payload: Record<string, unknown>, assignment: Assignment) {
+  if (typeof payload.property_id !== "string" || payload.property_id.toLowerCase() !== assignment.property_id.toLowerCase() ||
+      typeof payload.periods_applied !== "number" || !Number.isInteger(payload.periods_applied) || payload.periods_applied < 0 ||
+      typeof payload.pushed_to_nextpax !== "boolean" || !Array.isArray(payload.periods)) {
+    throw new ChannelFeatureError(502, "Réponse prix non conforme au contrat API.");
+  }
+  const periods = payload.periods.map((item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new ChannelFeatureError(502, "Réponse prix non conforme au contrat API.");
+    const period = item as Record<string, unknown>;
+    if (typeof period.id !== "string" || !period.id.trim() || !validDate(period.start_date) || !validDate(period.end_date) ||
+        period.start_date > period.end_date || typeof period.price !== "number" || !Number.isFinite(period.price) ||
+        typeof period.min_stay !== "number" || !Number.isInteger(period.min_stay) ||
+        (period.max_stay != null && (typeof period.max_stay !== "number" || !Number.isInteger(period.max_stay))) ||
+        (period.label != null && typeof period.label !== "string")) {
+      throw new ChannelFeatureError(502, "Réponse prix non conforme au contrat API.");
+    }
+    return period;
+  });
+  return { property_id: assignment.property_id, periods_applied: payload.periods_applied, periods, pushed_to_nextpax: payload.pushed_to_nextpax };
 }
 
 function validateCalendar(payload: Record<string, unknown>, assignment: Assignment) {
@@ -362,6 +433,19 @@ export async function handleChannelFeatures(
     }
     console.info("[owner-channel-proxy] photos reordered", { propertyId: assignment.property_id, count: payload.photos_updated });
     return { property_id: assignment.property_id, images: returnedImages, photos_updated: payload.photos_updated };
+  }
+
+  if (body.action === "pricing_replace") {
+    if (isAdmin) throw new ChannelFeatureError(403, "Les périodes tarifaires propriétaire doivent être modifiées depuis le profil attribué.");
+    const assignment = await assignmentForOwnerWrite(db, body.assignment_id, userId);
+    const periods = validatePricingPeriods(body.periods);
+    const payload = await callCadence("owner-site-pricing", {
+      method: "POST",
+      body: { property_id: assignment.property_id, periods },
+    });
+    const result = validatePricingResponse(payload, assignment);
+    console.info("[owner-channel-proxy] owner pricing replaced", { propertyId: assignment.property_id, count: result.periods_applied });
+    return result;
   }
 
   if (body.action === "calendar") {

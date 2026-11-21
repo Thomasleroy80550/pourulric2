@@ -24,6 +24,25 @@ export interface ChannelCalendar {
   availability_source: string | null;
   fetched_at: string;
 }
+export interface ChannelPricingPeriodInput {
+  start_date: string;
+  end_date: string;
+  price: number;
+  min_stay: number;
+  max_stay?: number;
+  label?: string;
+}
+export interface ChannelPricingPeriod extends ChannelPricingPeriodInput {
+  id: string;
+  label: string | null;
+  max_stay: number | null;
+}
+export interface ChannelPricingReplaceResult {
+  property_id: string;
+  periods_applied: number;
+  periods: ChannelPricingPeriod[];
+  pushed_to_nextpax: boolean;
+}
 export interface ChannelBlock {
   id: string;
   check_in: string;
@@ -123,6 +142,9 @@ async function request<T>(body: Record<string, unknown>): Promise<T> {
 
 export const getChannelCalendar = (assignmentId: string, from?: string, to?: string) =>
   request<ChannelCalendar>({ action: "calendar", assignment_id: assignmentId, ...(from ? { from } : {}), ...(to ? { to } : {}) });
+
+export const replaceChannelPricing = (assignmentId: string, periods: ChannelPricingPeriodInput[]) =>
+  request<ChannelPricingReplaceResult>({ action: "pricing_replace", assignment_id: assignmentId, periods });
 
 export const getChannelBlocks = (assignmentId: string) =>
   request<ChannelBlocksPage>({ action: "blocks", assignment_id: assignmentId });

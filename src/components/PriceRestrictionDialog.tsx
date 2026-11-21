@@ -37,6 +37,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { getOverrides, addOverrides, deleteOverride, PriceOverride, NewPriceOverride } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import ChannelCalendarPanel from '@/components/channel/ChannelCalendarPanel';
+import ChannelPricingPeriodsPanel from '@/components/channel/ChannelPricingPeriodsPanel';
 import type { ReservationSource } from '@/lib/channel-reservations-api';
 
 interface PriceRestrictionDialogProps {
@@ -133,6 +134,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   const [roomTypes, setRoomTypes] = useState<KrossbookingRoomType[]>([]);
   const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(true);
   const [channelAssignmentId, setChannelAssignmentId] = useState('');
+  const [channelCalendarRefreshKey, setChannelCalendarRefreshKey] = useState(0);
   const linkedChannelSources = channelSources.filter(source =>
     source.user_room_id && userRooms.some(room => room.id === source.user_room_id)
   );
@@ -344,7 +346,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
           <DialogHeader>
             <DialogTitle>Prix et disponibilités Cadence</DialogTitle>
             <DialogDescription>
-              Données Cadence en lecture seule pour vos logements liés.
+              Calendrier Cadence en direct et gestion des périodes tarifaires propriétaire pour vos logements liés.
             </DialogDescription>
           </DialogHeader>
           <div className="max-w-md space-y-2">
@@ -358,7 +360,12 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
-          {channelAssignmentId ? <ChannelCalendarPanel assignmentId={channelAssignmentId} /> : <p className="text-sm text-muted-foreground">Aucun logement Cadence lié n’est disponible.</p>}
+          {channelAssignmentId ? (
+            <div className="space-y-6">
+              <ChannelCalendarPanel assignmentId={channelAssignmentId} refreshKey={channelCalendarRefreshKey} />
+              <ChannelPricingPeriodsPanel key={channelAssignmentId} assignmentId={channelAssignmentId} onSaved={() => setChannelCalendarRefreshKey(value => value + 1)} />
+            </div>
+          ) : <p className="text-sm text-muted-foreground">Aucun logement Cadence lié n’est disponible.</p>}
         </DialogContent>
       </Dialog>
     );

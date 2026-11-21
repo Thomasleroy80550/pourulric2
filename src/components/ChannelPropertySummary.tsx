@@ -3,8 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, ArrowDown, ArrowUp, Check, ImageOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ChannelProperty, ChannelPropertyPhoto } from "@/lib/owner-channel-api";
-import type { UserRoom } from "@/lib/user-room-api";
-import { roomEquipmentItems } from "@/lib/room-equipment-display";
 import {
   applyChannelPhotoOrder,
   channelPhotoKey,
@@ -20,7 +18,6 @@ import { Button } from "@/components/ui/button";
 
 interface ChannelPropertySummaryProps {
   property?: ChannelProperty;
-  room?: UserRoom;
   compact?: boolean;
   photoOrder?: string[];
   allowPhotoReorder?: boolean;
@@ -30,7 +27,7 @@ function sameOrder(a: ChannelPropertyPhoto[], b: ChannelPropertyPhoto[]) {
   return a.length === b.length && a.every((photo, index) => channelPhotoKey(photo) === channelPhotoKey(b[index]));
 }
 
-export default function ChannelPropertySummary({ property, room, compact = false, photoOrder, allowPhotoReorder = false }: ChannelPropertySummaryProps) {
+export default function ChannelPropertySummary({ property, compact = false, photoOrder, allowPhotoReorder = false }: ChannelPropertySummaryProps) {
   const queryClient = useQueryClient();
   const [draftPhotos, setDraftPhotos] = useState<ChannelPropertyPhoto[] | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
@@ -38,9 +35,7 @@ export default function ChannelPropertySummary({ property, room, compact = false
   const basePhotos = useMemo(() => property ? channelPropertyPhotos(property) : [], [property]);
   const savedPhotos = useMemo(() => applyChannelPhotoOrder(basePhotos, photoOrder), [basePhotos, photoOrder]);
   const photos = draftPhotos ?? savedPhotos;
-  const cadenceEquipments = useMemo(() => property ? channelPropertyEquipments(property) : [], [property]);
-  const equipments = cadenceEquipments.length ? cadenceEquipments : room ? roomEquipmentItems(room) : [];
-  const equipmentSource = cadenceEquipments.length ? "Cadence" : "du logement";
+  const equipments = useMemo(() => property ? channelPropertyEquipments(property) : [], [property]);
   const orderChanged = draftPhotos !== null && !sameOrder(draftPhotos, savedPhotos);
 
   useEffect(() => {
@@ -107,13 +102,13 @@ export default function ChannelPropertySummary({ property, room, compact = false
       )}
 
       <div className="space-y-2">
-        <p className="text-sm font-medium">Équipements {equipmentSource}</p>
+        <p className="text-sm font-medium">Équipements Cadence</p>
         {equipments.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {equipments.map(equipment => <Badge key={equipment} variant="secondary">{equipment}</Badge>)}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Aucun équipement disponible pour ce logement.</p>
+          <p className="text-sm text-muted-foreground">L’API Cadence actuelle ne renvoie pas les équipements de ce logement.</p>
         )}
       </div>
 

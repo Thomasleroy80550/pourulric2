@@ -16,7 +16,6 @@ import DigitalBookletManager from './DigitalBookletManager';
 import ChannelPropertySummary from './ChannelPropertySummary';
 import type { ChannelProperty } from '@/lib/owner-channel-api';
 import { channelPropertyEquipments } from '@/lib/channel-property-display';
-import { roomEquipmentItems } from '@/lib/room-equipment-display';
 import { Badge } from '@/components/ui/badge';
 
 type Section = 'general' | 'access' | 'parking' | 'rules' | 'equipment' | 'furniture' | 'safety' | 'booklet';
@@ -73,7 +72,7 @@ export function RoomManagementDialog({ room, channelProperty, channelPhotoOrder 
           <div className="w-3/4 p-6 overflow-y-auto">
             {activeSection === 'general' && (
               <div className="space-y-6">
-                <ChannelPropertySummary property={channelProperty} room={room} photoOrder={channelPhotoOrder} allowPhotoReorder={profile?.role === 'admin' && Boolean(channelProperty)} />
+                <ChannelPropertySummary property={channelProperty} photoOrder={channelPhotoOrder} allowPhotoReorder={profile?.role === 'admin' && Boolean(channelProperty)} />
                 <RoomGeneralInfoForm room={room} />
               </div>
             )}
@@ -82,25 +81,26 @@ export function RoomManagementDialog({ room, channelProperty, channelPhotoOrder 
             {activeSection === 'rules' && <RoomHouseRulesForm room={room} />}
             {activeSection === 'equipment' && (
               <div className="space-y-6">
-                {(() => {
-                  const cadenceEquipments = channelProperty ? channelPropertyEquipments(channelProperty) : [];
-                  const equipments = cadenceEquipments.length ? cadenceEquipments : roomEquipmentItems(room);
-                  return (
-                    <section className="rounded-xl border bg-muted/20 p-4">
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        {cadenceEquipments.length ? 'Équipements Cadence' : 'Équipements du logement'}
-                      </p>
-                      {equipments.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {equipments.map(equipment => <Badge key={equipment} variant="secondary">{equipment}</Badge>)}
-                        </div>
-                      ) : (
-                        <p className="mt-3 text-sm text-muted-foreground">Aucun équipement disponible pour ce logement.</p>
-                      )}
-                    </section>
-                  );
-                })()}
-                <RoomEquipmentForm room={room} />
+                {channelProperty ? (
+                  (() => {
+                    const equipments = channelPropertyEquipments(channelProperty);
+                    return (
+                      <section className="rounded-xl border bg-muted/20 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Équipements Cadence</p>
+                        {equipments.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {equipments.map(equipment => <Badge key={equipment} variant="secondary">{equipment}</Badge>)}
+                          </div>
+                        ) : (
+                          <p className="mt-3 text-sm text-muted-foreground">L’API Cadence actuelle ne renvoie pas les équipements de ce logement.</p>
+                        )}
+                        <p className="mt-3 text-xs text-muted-foreground">Ces données sont en lecture seule pour le client.</p>
+                      </section>
+                    );
+                  })()
+                ) : (
+                  <RoomEquipmentForm room={room} />
+                )}
               </div>
             )}
             {activeSection === 'furniture' && <RoomFurnitureList userRoomId={room.id} />}

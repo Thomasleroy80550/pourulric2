@@ -273,7 +273,7 @@ const CalendarPage: React.FC = () => {
       return;
     }
     if (hasChannelRooms) {
-      navigate('/prix-cadence');
+      navigate('/channel/pricing');
       return;
     }
     setIsPriceRestrictionDialogOpen(true);

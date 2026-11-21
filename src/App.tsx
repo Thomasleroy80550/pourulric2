@@ -368,6 +368,7 @@ function App() {
                       <Route path="/calendar" element={<CalendarPage />} />
                       <Route path="/planning-v3" element={<PlanningV3Page />} />
                       <Route path="/planning-v2" element={<PlanningV2Page />} />
+                      <Route path="/channel/pricing" element={<ChannelPricingPage />} />
                       <Route path="/prix-cadence" element={<ChannelPricingPage />} />
                       <Route path="/admin/channel-reservations" element={<ChannelReservationsPage />} />
                       <Route path="/admin/cadence" element={<OwnerChannelPage />} />

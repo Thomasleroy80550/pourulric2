@@ -76,19 +76,30 @@ function humanizeEquipmentLabel(value: string): string {
   return label ? label.charAt(0).toUpperCase() + label.slice(1) : "";
 }
 
-function collectEquipment(value: unknown, output: string[]): void {
+function collectEquipment(value: unknown, output: string[], seenCodes: Set<string>): void {
   if (typeof value === "string") {
     const label = humanizeEquipmentLabel(value);
     if (label) output.push(label);
     return;
   }
   if (Array.isArray(value)) {
-    value.forEach(item => collectEquipment(item, output));
+    value.forEach(item => collectEquipment(item, output, seenCodes));
     return;
   }
   if (!value || typeof value !== "object") return;
   const record = value as Record<string, unknown>;
-  const coded = [record.code, record.key, record.slug, record.id].find(item => typeof item === "string" && item.trim());
+  const officialCode = typeof record.code === "string" ? record.code.trim() : "";
+  if (officialCode) {
+    const codeKey = officialCode.toLowerCase();
+    if (seenCodes.has(codeKey)) return;
+    seenCodes.add(codeKey);
+    const officialLabel = localizedText(record);
+    // Cadence renvoie label === code pour un code absent du référentiel : ne pas l’afficher.
+    if (!officialLabel || officialLabel.toLowerCase() === codeKey) return;
+    output.push(humanizeEquipmentLabel(officialLabel));
+    return;
+  }
+  const coded = [record.key, record.slug, record.id].find(item => typeof item === "string" && item.trim());
   const direct = localizedText(record) || (typeof coded === "string" ? coded : "");
   const enabled = record.enabled !== false && record.available !== false && record.present !== false && record.value !== false;
   if (direct && enabled) {
@@ -97,29 +108,30 @@ function collectEquipment(value: unknown, output: string[]): void {
   }
   Object.entries(record).forEach(([key, item]) => {
     if (item === true || (typeof item === "number" && item > 0) || item === "true" || item === "yes") output.push(humanizeEquipmentLabel(key));
-    else if (Array.isArray(item)) collectEquipment(item, output);
+    else if (Array.isArray(item)) collectEquipment(item, output, seenCodes);
   });
 }
 
-function collectNamedEquipmentFields(value: unknown, output: string[], depth = 0, visited = new Set<object>()): void {
+function collectNamedEquipmentFields(value: unknown, output: string[], seenCodes: Set<string>, depth = 0, visited = new Set<object>()): void {
   if (depth > 5 || !value || typeof value !== "object") return;
   if (visited.has(value)) return;
   visited.add(value);
   if (Array.isArray(value)) {
-    value.forEach(item => collectNamedEquipmentFields(item, output, depth + 1, visited));
+    value.forEach(item => collectNamedEquipmentFields(item, output, seenCodes, depth + 1, visited));
     return;
   }
   Object.entries(value as Record<string, unknown>).forEach(([key, item]) => {
-    if (/amenit|equip|feature|facilit/i.test(key)) collectEquipment(item, output);
-    collectNamedEquipmentFields(item, output, depth + 1, visited);
+    if (/amenit|equip|feature|facilit/i.test(key)) collectEquipment(item, output, seenCodes);
+    collectNamedEquipmentFields(item, output, seenCodes, depth + 1, visited);
   });
 }
 
 export function channelPropertyEquipments(property: ChannelProperty): string[] {
   const output: string[] = [];
+  const seenCodes = new Set<string>();
   [property.amenities, property.equipment, property.equipments, property.features, property.facilities]
-    .forEach(value => collectEquipment(value, output));
-  collectNamedEquipmentFields(property, output);
+    .forEach(value => collectEquipment(value, output, seenCodes));
+  collectNamedEquipmentFields(property, output, seenCodes);
   const seen = new Set<string>();
   return output.filter(label => {
     const key = label.toLowerCase();

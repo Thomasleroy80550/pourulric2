@@ -61,8 +61,9 @@ serve(async (req) => {
   const secret = Deno.env.get("CADENCE_WEBHOOK_SIGNING_SECRET");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!secret || !supabaseUrl || !serviceKey) {
-    console.error("[cadence-reservation-webhook] missing server configuration");
+  const secretBytes = secret ? encoder.encode(secret).length : 0;
+  if (!secret || secretBytes < 32 || secretBytes > 512 || !supabaseUrl || !serviceKey) {
+    console.error("[cadence-reservation-webhook] missing or invalid server configuration");
     return json({ error: "webhook_not_configured" }, 503);
   }
 
@@ -109,9 +110,10 @@ serve(async (req) => {
     }
     if (typeof body.event_id !== "string" || !uuid.test(body.event_id) ||
       typeof body.property_id !== "string" || !uuid.test(body.property_id) ||
+      typeof body.agency_id !== "string" || !uuid.test(body.agency_id) ||
       typeof body.event_type !== "string" || !eventTypes.has(body.event_type) ||
-      !validText(body.agency_id, 200) || !validText(body.environment, 100) ||
-      !validText(body.reservation_id, 200)) {
+      !validText(body.environment, 100) ||
+      typeof body.reservation_id !== "string" || !/^(np_|direct_).+/.test(body.reservation_id) || body.reservation_id.length > 200) {
       return json({ error: "invalid_payload" }, 400);
     }
 

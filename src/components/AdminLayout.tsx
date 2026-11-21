@@ -91,6 +91,7 @@ const adminNavigationCategories = [
       { name: 'Clients', href: '/admin/users', icon: Users, description: 'Gérer les comptes et profils clients.' },
       { name: 'Onboarding logements', href: '/admin/channel-onboarding', icon: CheckCheck, description: 'Rapprocher et attribuer en lot les logements du nouveau channel aux propriétaires.' },
       { name: 'Réservations nouveau channel', href: '/admin/channel-reservations', icon: CalendarDays, description: 'Synchroniser et consulter les réservations des logements déjà attribués.' },
+      { name: 'Portail Cadence', href: '/admin/cadence', icon: Building2, description: 'Consulter prix, blocages, ménages et avis des logements attribués.' },
       { name: 'N° Enregistrement', href: '/admin/housing-registrations', icon: ClipboardList, description: "Numéros d'enregistrement des logements communiqués par les clients." },
       { name: 'Accès délégués', href: '/admin/delegated-access', icon: ShieldCheck, description: 'Visualiser les accès délégués accordés par les propriétaires.' },
       { name: 'Logements', href: '/admin/user-rooms', icon: BedDouble, description: 'Consulter les logements des utilisateurs.' },

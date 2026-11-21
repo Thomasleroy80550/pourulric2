@@ -8,6 +8,7 @@ import CalendarPage from "./pages/CalendarPage";
 import CalendarPageMobile from "./pages/CalendarPageMobile";
 import BookingsPage from "./pages/BookingsPage";
 import ChannelReservationsPage from "./pages/ChannelReservationsPage";
+import OwnerChannelPage from "./pages/OwnerChannelPage";
 import PerformancePage from "./pages/PerformancePage";
 import ReviewsPage from "./pages/ReviewsPage";
 import ReviewsEmbedPage from "./pages/ReviewsEmbedPage";
@@ -368,6 +369,8 @@ function App() {
                       <Route path="/planning-v2" element={<PlanningV2Page />} />
                       <Route path="/channel-reservations" element={<ChannelReservationsPage />} />
                       <Route path="/admin/channel-reservations" element={<ChannelReservationsPage />} />
+                      <Route path="/cadence" element={<OwnerChannelPage />} />
+                      <Route path="/admin/cadence" element={<OwnerChannelPage />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />
                                           <Route path="/bookings" element={<BookingsPage />} />
                                           <Route path="/prevision-ca" element={<RevenueForecastPage />} />

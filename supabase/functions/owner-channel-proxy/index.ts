@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { assignOnboardingBatch, loadOnboardingContext } from "./onboarding.ts";
 import { handleReservations, ReservationRequestError } from "./reservations.ts";
+import { ChannelFeatureError, handleChannelFeatures } from "./features.ts";
 
 const endpoint = "https://kbdjwnfpgwzbxskiaddg.supabase.co/functions/v1/owner-site-properties";
 const corsHeaders = {
@@ -63,6 +64,9 @@ serve(async (req) => {
 
     if (["reservation_sources", "reservation_cache", "reservation_sync_start", "reservation_sync_page"].includes(body.action)) {
       return json(await handleReservations(db, body, auth.user.id, isAdmin, upstream));
+    }
+    if (["calendar", "blocks", "block_create", "cleaning_list", "cleaning_detail", "reviews_cache", "reviews_sync_start", "reviews_sync_page"].includes(body.action)) {
+      return json(await handleChannelFeatures(db, body, auth.user.id, isAdmin));
     }
     if (body.action === "onboarding_context") return json(await loadOnboardingContext(db));
     if (body.action === "assign_batch") {
@@ -126,7 +130,7 @@ serve(async (req) => {
     }
     return json({ error: "Action inconnue." }, 400);
   } catch (error) {
-    if (error instanceof RequestError || error instanceof ReservationRequestError) return json({ error: error.message }, error.status);
+    if (error instanceof RequestError || error instanceof ReservationRequestError || error instanceof ChannelFeatureError) return json({ error: error.message }, error.status);
     console.error("[owner-channel-proxy] request failed", { message: error instanceof Error ? error.message : "Unknown error" });
     return json({ error: "Impossible de traiter la demande du channel." }, 500);
   }

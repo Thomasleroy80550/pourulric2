@@ -8,9 +8,9 @@ Authentification serveur par HMAC, sans session utilisateur ni JWT Supabase. Ne 
 
 ## Configuration préalable
 
-Configurer `CADENCE_WEBHOOK_SIGNING_SECRET` dans Supabase → Edge Functions → Manage Secrets et configurer la même valeur dans le système émetteur Cadence, via un canal sécurisé. Utiliser un secret aléatoire dédié d’au moins 32 octets. La valeur est utilisée comme texte UTF-8, sans décodage hexadécimal/base64 ni suppression des espaces. Ne jamais stocker cette valeur dans le navigateur, le dépôt ou les logs.
+Configurer `CADENCE_WEBHOOK_SIGNING_SECRET` dans Supabase → Edge Functions → Manage Secrets et configurer la même valeur dans le système émetteur Cadence, via un canal sécurisé. Utiliser un secret aléatoire dédié de 32 à 512 octets UTF-8. La valeur est utilisée telle quelle, sans décodage hexadécimal/base64 ni suppression des espaces. Ne jamais stocker cette valeur dans le navigateur, le dépôt ou les logs.
 
-Sans ce secret, le serveur refuse les POST avec `503 webhook_not_configured` et n’enregistre rien.
+Sans ce secret, le serveur refuse les POST avec `503 webhook_not_configured` et n’enregistre rien. La vérification Cadence peut envoyer `{}` signé : le récepteur répond alors `400 {"error":"invalid_payload"}` sans créer d’événement ni de notification.
 
 ## Headers et signature
 
@@ -36,9 +36,9 @@ Exemple illustratif, à remplacer par les identifiants exacts de l’attribution
   "event_id": "37c935e4-dc75-4b4e-8314-117469e4b4d4",
   "event_type": "reservation.created",
   "property_id": "01e1e43f-2860-427c-9bfb-8b3c8e5d55bb",
-  "agency_id": "identifiant-agence-exact",
-  "environment": "environnement-exact",
-  "reservation_id": "CAD-12345"
+  "agency_id": "5f6f7b42-1111-4222-8333-944455556666",
+  "environment": "production",
+  "reservation_id": "np_123456"
 }
 ```
 
@@ -49,11 +49,11 @@ Les six champs sont obligatoires :
 | `event_id` | UUID globalement unique et stable pour cet événement |
 | `event_type` | `reservation.created`, `reservation.modified` ou `reservation.cancelled` |
 | `property_id` | UUID du logement source |
-| `agency_id` | Chaîne non vide, 200 caractères maximum |
-| `environment` | Chaîne non vide, 100 caractères maximum |
-| `reservation_id` | Référence de réservation, chaîne non vide, 200 caractères maximum |
+| `agency_id` | UUID de l’agence, identique à `owner-site-properties` |
+| `environment` | Chaîne non vide, 100 caractères maximum, identique à `owner-site-properties` |
+| `reservation_id` | Identifiant `np_…` ou `direct_…`, 200 caractères maximum ; `hist_…` est refusé |
 
-Aucun espace de début/fin ni caractère de contrôle dans les trois chaînes. Aucun rapprochement par nom. Les champs supplémentaires sont ignorés fonctionnellement mais restent couverts par la signature et l’empreinte du corps. Le registre conserve l’empreinte SHA-256 du corps, les identifiants et les destinataires, pas le corps complet.
+Aucun espace de début/fin ni caractère de contrôle dans les chaînes. Aucun rapprochement par nom. Les champs supplémentaires sont ignorés fonctionnellement mais restent couverts par la signature et l’empreinte du corps. Le registre conserve l’empreinte SHA-256 du corps, les identifiants et les destinataires, pas le corps complet.
 
 ## Transaction et destinataires
 

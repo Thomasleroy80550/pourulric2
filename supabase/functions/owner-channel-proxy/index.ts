@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { assignOnboardingBatch, loadOnboardingContext } from "./onboarding.ts";
+import { assignOnboardingBatch, defaultRoomIds, loadOnboardingContext } from "./onboarding.ts";
 import { handleReservations, ReservationRequestError } from "./reservations.ts";
 import { ChannelFeatureError, handleChannelFeatures } from "./features.ts";
 
@@ -59,7 +59,7 @@ serve(async (req) => {
     const body = await req.json().catch(() => null);
     if (!body || typeof body.action !== "string") return json({ error: "Action requise." }, 400);
     const isAdmin = profile.role === "admin";
-    const adminActions = ["catalog", "assignments", "assign", "unassign", "onboarding_context", "assign_batch"];
+    const adminActions = ["catalog", "assignments", "assign", "unassign", "link_room", "onboarding_context", "assign_batch"];
     if (adminActions.includes(body.action) && !isAdmin) return json({ error: "Accès réservé aux administrateurs." }, 403);
 
     if (["reservation_sources", "reservation_cache", "reservation_sync_start", "reservation_sync_page"].includes(body.action)) {
@@ -92,12 +92,29 @@ serve(async (req) => {
       if (!client) return json({ error: "Profil introuvable." }, 404);
       const detail = await upstream({ property_id: body.property_id });
       if (!detail.properties.some((p: { id: string }) => p.id.toLowerCase() === body.property_id.toLowerCase())) return json({ error: "Logement introuvable." }, 404);
+      const roomIds = await defaultRoomIds(db, [body.client_profile_id]);
       const { error } = await db.from("channel_property_assignments").upsert({
         client_profile_id: body.client_profile_id, property_id: body.property_id,
         agency_id: detail.agency_id, environment: detail.environment,
+        user_room_id: roomIds.get(body.client_profile_id) ?? null,
       }, { onConflict: "client_profile_id,property_id,agency_id,environment", ignoreDuplicates: true });
       if (error) throw error;
       console.info("[owner-channel-proxy] property assigned", { profileId: body.client_profile_id, propertyId: body.property_id });
+      return json({ success: true });
+    }
+    if (body.action === "link_room") {
+      if (typeof body.assignment_id !== "string" || !uuid.test(body.assignment_id)) return json({ error: "Attribution invalide." }, 400);
+      if (body.user_room_id !== null && (typeof body.user_room_id !== "string" || !uuid.test(body.user_room_id))) return json({ error: "Logement local invalide." }, 400);
+      const { data: assignment, error: assignmentError } = await db.from("channel_property_assignments").select("id,client_profile_id").eq("id", body.assignment_id).maybeSingle();
+      if (assignmentError) throw assignmentError;
+      if (!assignment) return json({ error: "Attribution introuvable." }, 404);
+      if (body.user_room_id) {
+        const { data: room, error: roomError } = await db.from("user_rooms").select("id,user_id").eq("id", body.user_room_id).maybeSingle();
+        if (roomError) throw roomError;
+        if (!room || room.user_id !== assignment.client_profile_id) return json({ error: "Ce logement local n’appartient pas au profil attribué." }, 400);
+      }
+      const { error } = await db.from("channel_property_assignments").update({ user_room_id: body.user_room_id }).eq("id", body.assignment_id);
+      if (error) throw error;
       return json({ success: true });
     }
     if (body.action === "unassign") {
@@ -119,7 +136,13 @@ serve(async (req) => {
           const detail = await upstream({ property_id: link.property_id });
           if (detail.agency_id === link.agency_id && detail.environment === link.environment) {
             const property = detail.properties.find((p: { id: string }) => p.id.toLowerCase() === link.property_id.toLowerCase());
-            if (property) properties.push({ ...property, agency_id: detail.agency_id, environment: detail.environment });
+            if (property) properties.push({
+              ...property,
+              agency_id: detail.agency_id,
+              environment: detail.environment,
+              assignment_id: link.id,
+              user_room_id: link.user_room_id,
+            });
           }
         } catch (error) {
           if (error instanceof RequestError && error.status === 404) continue;

@@ -7,7 +7,8 @@ import {
   ImportedChannelReservation, startChannelReservationSync, ReservationSource,
 } from "@/lib/channel-reservations-api";
 import { ChannelApiError } from "@/lib/owner-channel-api";
-import { channelRoom, displayChannelReservation, mergeOwnerReservationDisplay } from "@/lib/owner-reservation-display";
+import { channelRoom, displayChannelBlock, displayChannelReservation, mergeOwnerReservationDisplay } from "@/lib/owner-reservation-display";
+import { getChannelBlocks, type ChannelBlock } from "@/lib/channel-features-api";
 import type { KrossbookingReservation } from "@/lib/krossbooking";
 import type { UserRoom } from "@/lib/user-room-api";
 
@@ -28,6 +29,15 @@ async function readProperty(source: ReservationSource): Promise<CachedProperty> 
     cursor = page.next_cursor;
   } while (cursor);
   return { assignmentId: source.id, records, hasImport };
+}
+
+async function readBlocks(source: ReservationSource): Promise<ChannelBlock[]> {
+  try {
+    const page = await getChannelBlocks(source.id);
+    return page.blocks;
+  } catch {
+    return [];
+  }
 }
 
 export function useOwnerReservationFeed(legacyRooms: UserRoom[] = emptyRooms, legacyReservations: KrossbookingReservation[] = emptyReservations) {
@@ -51,6 +61,11 @@ export function useOwnerReservationFeed(legacyRooms: UserRoom[] = emptyRooms, le
   const cache = useQuery({
     queryKey: cacheKey, enabled: enabled && sources.isSuccess, staleTime: 60 * 1000, retry: false,
     queryFn: () => Promise.all(assignments.map(readProperty)),
+  });
+  const blocksKey = ["owner-channel-blocks", userId, ids];
+  const blocks = useQuery({
+    queryKey: blocksKey, enabled: enabled && sources.isSuccess, staleTime: 60 * 1000, retry: false,
+    queryFn: () => Promise.all(assignments.map(async source => ({ assignmentId: source.id, blocks: await readBlocks(source) }))),
   });
   const syncKey = ["owner-reservation-auto-sync", userId, ids];
   const sync = useQuery({
@@ -89,17 +104,24 @@ export function useOwnerReservationFeed(legacyRooms: UserRoom[] = emptyRooms, le
   }, [enabled, sources.error, cache.error]);
 
   const display = useMemo(() => {
-    if (!enabled) return { rooms: legacyRooms, reservations: legacyReservations };
+    if (!enabled) return { rooms: legacyRooms, reservations: legacyReservations, replacedRoomIds: new Set<string>() };
     const channelRooms = (sources.data || []).map(channelRoom);
     const channelReservations = (cache.data || []).flatMap(item => {
       const source = sources.data?.find(source => source.id === item.assignmentId);
       if (!source) return [];
       return item.records.map(record => displayChannelReservation(record, source)).filter((record): record is KrossbookingReservation => record !== null);
     });
-    return mergeOwnerReservationDisplay(legacyRooms, legacyReservations, channelRooms, channelReservations);
-  }, [enabled, legacyRooms, legacyReservations, sources.data, cache.data]);
+    const channelBlocks = (blocks.data || []).flatMap(item => {
+      const source = sources.data?.find(source => source.id === item.assignmentId);
+      if (!source) return [];
+      return item.blocks.map(block => displayChannelBlock(block, source));
+    });
+    return mergeOwnerReservationDisplay(legacyRooms, legacyReservations, channelRooms, [...channelReservations, ...channelBlocks]);
+  }, [enabled, legacyRooms, legacyReservations, sources.data, cache.data, blocks.data]);
   return {
     ...display,
+    sources: assignments,
+    unlinkedSources: assignments.filter(source => !source.user_room_id),
     isLoading: enabled && (sources.isLoading || cache.isLoading || (assignments.length > 0 && sync.isFetching && !cache.data?.some(item => item.hasImport))),
     isSyncing: enabled && sync.isFetching,
     error: enabled ? sources.error || cache.error : null,

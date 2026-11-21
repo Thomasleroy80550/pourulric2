@@ -13,6 +13,8 @@ import { RoomSafetyForm } from './RoomSafetyForm';
 import { Info, KeyRound, Lamp, BookText, Car, Shield, Sofa, BookOpen } from 'lucide-react';
 import { useSession } from './SessionContextProvider';
 import DigitalBookletManager from './DigitalBookletManager';
+import ChannelPropertySummary from './ChannelPropertySummary';
+import type { ChannelProperty } from '@/lib/owner-channel-api';
 
 type Section = 'general' | 'access' | 'parking' | 'rules' | 'equipment' | 'furniture' | 'safety' | 'booklet';
 
@@ -29,9 +31,10 @@ const sections: { id: Section; label: string; icon: React.ElementType }[] = [
 
 interface RoomManagementDialogProps {
   room: UserRoom;
+  channelProperty?: ChannelProperty;
 }
 
-export function RoomManagementDialog({ room }: RoomManagementDialogProps) {
+export function RoomManagementDialog({ room, channelProperty }: RoomManagementDialogProps) {
   const [activeSection, setActiveSection] = useState<Section>('general');
   const { profile } = useSession();
 
@@ -64,7 +67,12 @@ export function RoomManagementDialog({ room }: RoomManagementDialogProps) {
             })}
           </nav>
           <div className="w-3/4 p-6 overflow-y-auto">
-            {activeSection === 'general' && <RoomGeneralInfoForm room={room} />}
+            {activeSection === 'general' && (
+              <div className="space-y-6">
+                <ChannelPropertySummary property={channelProperty} />
+                <RoomGeneralInfoForm room={room} />
+              </div>
+            )}
             {activeSection === 'access' && <RoomAccessInfoForm room={room} />}
             {activeSection === 'parking' && <RoomParkingForm room={room} />}
             {activeSection === 'rules' && <RoomHouseRulesForm room={room} />}

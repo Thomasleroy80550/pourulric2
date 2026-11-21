@@ -18,7 +18,7 @@ export async function loadOnboardingContext(db: SupabaseClient) {
     if (data.length < 1000) break;
   }
   for (let offset = 0; ; offset += 1000) {
-    const { data, error } = await db.from("user_rooms").select("user_id,room_name").order("id").range(offset, offset + 999);
+    const { data, error } = await db.from("user_rooms").select("id,user_id,room_name").order("id").range(offset, offset + 999);
     if (error) throw error;
     rooms.push(...data);
     if (data.length < 1000) break;
@@ -30,6 +30,15 @@ export async function loadOnboardingContext(db: SupabaseClient) {
     if (data.length < 1000) break;
   }
   return { owners, rooms, assignments };
+}
+
+export async function defaultRoomIds(db: SupabaseClient, ownerIds: string[]) {
+  if (!ownerIds.length) return new Map<string, string>();
+  const { data, error } = await db.from("user_rooms").select("id,user_id").in("user_id", ownerIds);
+  if (error) throw error;
+  const grouped = new Map<string, string[]>();
+  (data ?? []).forEach(room => grouped.set(room.user_id, [...(grouped.get(room.user_id) ?? []), room.id]));
+  return new Map(Array.from(grouped.entries()).filter(([, ids]) => ids.length === 1).map(([ownerId, ids]) => [ownerId, ids[0]]));
 }
 
 export async function assignOnboardingBatch(
@@ -88,8 +97,14 @@ export async function assignOnboardingBatch(
     }
   }
   if (verified.length) {
+    const roomIds = await defaultRoomIds(db, verified.map(item => item.client_profile_id));
     const { error } = await db.from("channel_property_assignments").upsert(
-      verified.map(item => ({ ...item, agency_id: body.agency_id, environment: body.environment })),
+      verified.map(item => ({
+        ...item,
+        agency_id: body.agency_id,
+        environment: body.environment,
+        user_room_id: roomIds.get(item.client_profile_id) ?? null,
+      })),
       { onConflict: "client_profile_id,property_id,agency_id,environment", ignoreDuplicates: true },
     );
     if (error) throw error;

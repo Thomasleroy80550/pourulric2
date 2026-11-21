@@ -4,6 +4,7 @@ import { ChannelApiError, ChannelAssignment } from "./owner-channel-api";
 export interface ReservationSource extends ChannelAssignment {
   profiles: { first_name: string | null; last_name: string | null } | null;
   property_name?: string | null;
+  user_rooms?: { id: string; room_id: string; room_name: string } | null;
 }
 export interface ImportedChannelReservation {
   reservation_id: string;

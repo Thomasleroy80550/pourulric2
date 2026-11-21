@@ -4,15 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   assignChannelProperty, ChannelApiError, ChannelAssignment, ChannelProperty, channelPropertyName,
-  getChannelAssignments, getChannelCatalog, unassignChannelProperty,
+  getChannelAssignments, getChannelCatalog, linkChannelAssignmentRoom, unassignChannelProperty,
 } from "@/lib/owner-channel-api";
 
 export default function ChannelPropertyAssignments({ clientProfileId }: { clientProfileId: string }) {
   const [assignments, setAssignments] = useState<ChannelAssignment[]>([]);
   const [properties, setProperties] = useState<ChannelProperty[]>([]);
+  const [rooms, setRooms] = useState<{ id: string; room_name: string }[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [context, setContext] = useState<{ agency?: string; environment?: string }>({});
   const [loaded, setLoaded] = useState(false);
@@ -26,6 +29,13 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
     getChannelAssignments(clientProfileId).then(data => {
       if (active) setAssignments(data.assignments);
     }).catch(error => { if (active) setError(error.message); });
+    supabase.from("user_rooms").select("id,room_name").eq("user_id", clientProfileId).order("room_name")
+      .then(({ data, error }) => {
+        if (active) {
+          if (error) setError(error.message);
+          else setRooms(data ?? []);
+        }
+      });
     return () => { active = false; };
   }, [clientProfileId]);
   useEffect(() => {
@@ -63,6 +73,14 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
       toast.success("Logement attribué au profil.");
     } catch (error) { fail(error); } finally { setBusy(false); }
   };
+  const linkRoom = async (assignmentId: string, userRoomId: string) => {
+    setBusy(true); setError("");
+    try {
+      await linkChannelAssignmentRoom(assignmentId, userRoomId === "none" ? null : userRoomId);
+      setAssignments(previous => previous.map(link => link.id === assignmentId ? { ...link, user_room_id: userRoomId === "none" ? null : userRoomId } : link));
+      toast.success(userRoomId === "none" ? "Lien local retiré." : "Logement local lié explicitement.");
+    } catch (error) { fail(error); } finally { setBusy(false); }
+  };
   const remove = async (id: string) => {
     setBusy(true); setError("");
     try {
@@ -75,8 +93,8 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Nouveau channel — logements</CardTitle>
-        <CardDescription>Attributions indépendantes de Krossbooking. Un profil peut avoir plusieurs logements. Les modifications sont enregistrées immédiatement.</CardDescription>
+        <CardTitle>Cadence — logements</CardTitle>
+        <CardDescription>Attribution du profil puis lien explicite avec le logement local existant. Aucun rapprochement automatique par nom n’est utilisé pour les profils multi-logements.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Button asChild variant="outline"><Link to="/admin/channel-onboarding">Onboarding et attributions en lot</Link></Button>
@@ -86,10 +104,19 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
           {assignments.length === 0 && <p className="text-sm text-muted-foreground">Aucun logement du nouveau channel attribué.</p>}
           {assignments.map(link => (
             <div key={link.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
-              <div className="min-w-0 space-y-1">
+              <div className="min-w-0 flex-1 space-y-2">
                 <p className="break-all text-sm">{channelPropertyName(properties.find(p => p.id === link.property_id) || { id: link.property_id })}</p>
                 <p className="break-all text-xs text-muted-foreground">{link.property_id} · Agence {link.agency_id}</p>
-                <Badge variant="secondary">{link.environment}</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">{link.environment}</Badge>
+                  <Select value={link.user_room_id || "none"} disabled={busy} onValueChange={value => linkRoom(link.id, value)}>
+                    <SelectTrigger className="w-72"><SelectValue placeholder="Choisir le logement local" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Lien local à compléter</SelectItem>
+                      {rooms.map(room => <SelectItem key={room.id} value={room.id}>{room.room_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => remove(link.id)}>Retirer l’attribution</Button>
             </div>

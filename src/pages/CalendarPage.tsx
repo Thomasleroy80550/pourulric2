@@ -52,6 +52,7 @@ const CalendarPage: React.FC = () => {
   const channelFeed = useOwnerReservationFeed(legacyRooms, legacyReservations);
   const userRooms = channelFeed.rooms;
   const reservations = channelFeed.reservations;
+  const hasChannelRooms = channelFeed.replacedRoomIds.size > 0;
   const [icalReservations, setIcalReservations] = useState<KrossbookingReservation[]>([]);
   const [loadingLegacyData, setLoadingData] = useState(true);
   const loadingData = loadingLegacyData || channelFeed.isLoading;
@@ -357,7 +358,7 @@ const CalendarPage: React.FC = () => {
                 <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center w-full sm:w-auto text-sm sm:text-base">
   
                 <DollarSign className="h-4 w-4 mr-2" />
-                Configurer Prix
+                {hasChannelRooms ? 'Prix Cadence' : 'Configurer Prix'}
               </Button>
 
               <Button 
@@ -421,6 +422,7 @@ const CalendarPage: React.FC = () => {
           onOpenChange={setIsPriceRestrictionDialogOpen}
           userRooms={userRooms}
           onSettingsSaved={handlePriceRestrictionSaved}
+          useChannelCalendar={hasChannelRooms}
         />
         <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
           <AlertDialogContent>
@@ -485,7 +487,7 @@ const CalendarPage: React.FC = () => {
             <Button onClick={handlePriceRestrictionClick} variant="outline" className="flex items-center">
 
               <DollarSign className="h-4 w-4 mr-2" />
-              Configurer Prix
+              {hasChannelRooms ? 'Prix Cadence' : 'Configurer Prix'}
             </Button>
 
             <Button
@@ -598,6 +600,7 @@ const CalendarPage: React.FC = () => {
         onOpenChange={setIsPriceRestrictionDialogOpen}
         userRooms={userRooms}
         onSettingsSaved={handlePriceRestrictionSaved}
+        useChannelCalendar={hasChannelRooms}
       />
       <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
         <AlertDialogContent>

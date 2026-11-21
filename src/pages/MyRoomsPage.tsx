@@ -14,13 +14,33 @@ import {
   getCurrentMonthInputValue,
   getMonthlyFeaturedRooms,
 } from '@/lib/user-room-api';
+import { getMyChannelProperties, type ChannelProperty } from '@/lib/owner-channel-api';
+import { channelPropertyPhotos, channelPropertyTitle } from '@/lib/channel-property-display';
+
+async function getAllMyChannelProperties(): Promise<ChannelProperty[]> {
+  const properties: ChannelProperty[] = [];
+  let cursor: string | null = null;
+  do {
+    const page = await getMyChannelProperties(cursor);
+    properties.push(...page.properties);
+    cursor = page.next_cursor;
+  } while (cursor);
+  return properties;
+}
 
 const MyRoomsPage = () => {
+  const { profile } = useSession();
   const { data: rooms, isLoading, isFetching, error } = useQuery({
     queryKey: ['userRooms'],
     queryFn: getUserRooms,
   });
-  const { profile } = useSession();
+  const { data: channelProperties = [], isFetching: channelFetching } = useQuery({
+    queryKey: ['myChannelProperties', profile?.id],
+    queryFn: getAllMyChannelProperties,
+    enabled: Boolean(profile?.id && profile.role === 'user'),
+    staleTime: 60 * 1000,
+    retry: false,
+  });
   const currentMonth = getCurrentMonthInputValue();
   const currentMonthLabel = formatMonthLabel(currentMonth);
 
@@ -33,6 +53,10 @@ const MyRoomsPage = () => {
   const featuredRoomById = useMemo(
     () => new Map(featuredRooms.map((room) => [room.user_room_id, room])),
     [featuredRooms]
+  );
+  const channelPropertyByRoomId = useMemo(
+    () => new Map(channelProperties.filter(property => property.user_room_id).map(property => [property.user_room_id as string, property])),
+    [channelProperties]
   );
 
   if (profile?.is_payment_suspended) {
@@ -54,7 +78,7 @@ const MyRoomsPage = () => {
             <p className="text-muted-foreground">Gérez les informations et l'inventaire de vos propriétés.</p>
           </div>
 
-          {isFetching && !showInitialLoading && (
+          {(isFetching || channelFetching) && !showInitialLoading && (
             <div className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Mise à jour…
@@ -74,16 +98,27 @@ const MyRoomsPage = () => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {rooms.map((room) => {
               const featuredRoom = featuredRoomById.get(room.id);
+              const channelProperty = channelPropertyByRoomId.get(room.id);
+              const photo = channelProperty ? channelPropertyPhotos(channelProperty)[0] : undefined;
+              const displayName = channelProperty ? channelPropertyTitle(channelProperty) : room.room_name;
               return (
-                <Card key={room.id} className="flex flex-col">
+                <Card key={room.id} className="flex flex-col overflow-hidden">
+                  {photo && (
+                    <img
+                      src={photo.url}
+                      alt={photo.caption || displayName}
+                      loading="lazy"
+                      className="h-44 w-full object-cover"
+                    />
+                  )}
                   <CardHeader>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <CardTitle className="flex items-center">
                           <Building className="mr-2 h-5 w-5" />
-                          {room.room_name}
+                          {displayName}
                         </CardTitle>
-                        <CardDescription>{room.property_type || 'Type de propriété non défini'}</CardDescription>
+                        <CardDescription>{channelProperty ? 'Données Cadence' : room.property_type || 'Type de propriété non défini'}</CardDescription>
                       </div>
                       {featuredRoom && (
                         <Badge className="bg-amber-500 text-white hover:bg-amber-500">
@@ -111,7 +146,7 @@ const MyRoomsPage = () => {
                     )}
                   </CardContent>
                   <CardFooter className="gap-2">
-                    <RoomManagementDialog room={room} />
+                    <RoomManagementDialog room={room} channelProperty={channelProperty} />
                   </CardFooter>
                 </Card>
               );

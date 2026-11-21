@@ -82,7 +82,7 @@ export async function handleReservations(
 ) {
   if (body.action === "reservation_sources") {
     if (body.cursor != null && (typeof body.cursor !== "string" || !uuid.test(body.cursor))) throw new ReservationRequestError(400, "Curseur invalide.");
-    let query = db.from("channel_property_assignments").select("*, profiles(first_name,last_name)").order("id").limit(100);
+    let query = db.from("channel_property_assignments").select("*, profiles(first_name,last_name), user_rooms(id,room_id,room_name)").order("id").limit(100);
     if (!isAdmin) query = query.eq("client_profile_id", userId);
     if (body.cursor) query = query.gt("id", body.cursor);
     const { data, error } = await query;

@@ -1,12 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface ChannelPropertyPhoto {
+  url: string;
+  caption?: string;
+}
 export interface ChannelProperty {
   id: string;
   name?: string;
   title?: string;
   property_name?: string;
+  description?: string;
+  summary?: string;
+  photos?: Array<string | ChannelPropertyPhoto>;
+  images?: Array<string | ChannelPropertyPhoto>;
+  pictures?: Array<string | ChannelPropertyPhoto>;
+  media?: Array<string | ChannelPropertyPhoto>;
   agency_id?: string;
   environment?: string;
+  assignment_id?: string;
+  user_room_id?: string | null;
 }
 export interface ChannelAssignment {
   id: string;
@@ -14,6 +26,7 @@ export interface ChannelAssignment {
   property_id: string;
   agency_id: string;
   environment: string;
+  user_room_id?: string | null;
 }
 export interface ChannelPage {
   properties: ChannelProperty[];
@@ -42,6 +55,7 @@ export const getChannelCatalog = (cursor: string | null = null) => invoke<Channe
 export const getMyChannelProperties = (cursor: string | null = null) => invoke<ChannelPage>({ action: "mine", cursor });
 export const getChannelAssignments = (clientProfileId: string) => invoke<{ assignments: ChannelAssignment[] }>({ action: "assignments", client_profile_id: clientProfileId });
 export const assignChannelProperty = (clientProfileId: string, propertyId: string) => invoke<{ success: boolean }>({ action: "assign", client_profile_id: clientProfileId, property_id: propertyId });
+export const linkChannelAssignmentRoom = (assignmentId: string, userRoomId: string | null) => invoke<{ success: boolean }>({ action: "link_room", assignment_id: assignmentId, user_room_id: userRoomId });
 export const unassignChannelProperty = (assignmentId: string) => invoke<{ success: boolean }>({ action: "unassign", assignment_id: assignmentId });
 
 export interface OnboardingOwner {
@@ -54,7 +68,7 @@ export interface OnboardingOwner {
 }
 export interface OnboardingContext {
   owners: OnboardingOwner[];
-  rooms: { user_id: string; room_name: string }[];
+  rooms: { id: string; user_id: string; room_name: string }[];
   assignments: ChannelAssignment[];
 }
 export interface OnboardingSelection {

@@ -33,6 +33,9 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { UserRoom } from '@/lib/user-room-api';
 import { toast } from 'sonner';
 import { UserProfile } from '@/lib/profile-api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getReservationSources, type ReservationSource } from '@/lib/channel-reservations-api';
+import { createChannelBlock } from '@/lib/channel-features-api';
 
 interface OwnerReservationDialogProps {
   isOpen: boolean;
@@ -98,6 +101,27 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmCancellation, setConfirmCancellation] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: channelSources = [] } = useQuery({
+    queryKey: ['owner-reservation-sources', profile?.id],
+    enabled: isOpen && Boolean(profile?.id),
+    staleTime: 60 * 1000,
+    retry: false,
+    queryFn: async () => {
+      const sources: ReservationSource[] = [];
+      let cursor: string | null = null;
+      do {
+        const page = await getReservationSources(cursor);
+        sources.push(...page.sources);
+        cursor = page.next_cursor;
+      } while (cursor);
+      return sources;
+    },
+  });
+  const channelSourceForRoom = React.useCallback((roomId: string) => {
+    const room = userRooms.find(item => item.room_id === roomId);
+    return channelSources.find(source => source.user_rooms?.id === room?.id);
+  }, [channelSources, userRooms]);
 
   React.useEffect(() => {
     setError(null);
@@ -184,12 +208,12 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   }, [selectedRoomId, allReservations, initialBooking]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (initialBooking?.reservation_source === 'owner_channel' || values.roomId.startsWith('channel:')) {
-      toast.error('Les réservations du nouveau channel sont consultables en lecture seule.');
+    if (initialBooking?.reservation_source === 'owner_channel' && !initialBooking.channel_block_id) {
+      toast.error('Les réservations Cadence sont consultables en lecture seule.');
       return;
     }
-    if (!profile || !krossbookingPropertyId) {
-      toast.error("L'ID de propriété Krossbooking n'est pas défini sur le profil de l'utilisateur. Veuillez le configurer dans la section admin.");
+    if (initialBooking?.channel_block_id) {
+      toast.error('Un blocage Cadence ne peut pas être modifié : annulez-le puis recréez-le.');
       return;
     }
 
@@ -211,9 +235,42 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       return;
     }
 
-    const cod_reservation_status = values.foreseeCleaning ? 'PROPRI' : 'PROP0';
+    const channelSource = channelSourceForRoom(values.roomId);
     const cleaningSuffix = values.foreseeCleaning ? ' avec ménage' : ' sans ménage';
     const label = `${values.blockType}${cleaningSuffix}`;
+
+    if (channelSource) {
+      try {
+        setIsLoading(true);
+        await createChannelBlock({
+          assignmentId: channelSource.id,
+          requestId: crypto.randomUUID(),
+          checkIn: formattedArrival,
+          checkOut: formattedDeparture,
+          cleaningRequested: values.foreseeCleaning,
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['owner-channel-blocks'] }),
+          queryClient.invalidateQueries({ queryKey: ['owner-reservation-cache'] }),
+        ]);
+        toast.success('Blocage Cadence créé avec succès.');
+        onReservationCreated();
+        onOpenChange(false);
+      } catch (error: any) {
+        toast.error(`Erreur lors de la création du blocage Cadence : ${error.message}`);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    if (!profile || !krossbookingPropertyId) {
+      toast.error("Ce logement n’est pas encore lié à Cadence et l'ID Krossbooking n'est pas défini.");
+      return;
+    }
+
+    const cod_reservation_status = values.foreseeCleaning ? 'PROPRI' : 'PROP0';
 
     let id_room_type: string | undefined;
     for (const type of krossbookingRoomTypes) {
@@ -261,7 +318,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   };
 
   const cancelBlock = async () => {
-    if (!initialBooking || isLoading || initialBooking.reservation_source === 'owner_channel') return;
+    if (!initialBooking || isLoading) return;
+    if (initialBooking.reservation_source === 'owner_channel') return;
     const roomType = initialBooking.id_room_type || krossbookingRoomTypes.find(type =>
       type.rooms.some(room => String(room.id_room) === initialBooking.krossbooking_room_id)
     )?.id_room_type.toString();
@@ -475,7 +533,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                 {isLoading ? 'Enregistrement...' : (initialBooking ? 'Enregistrer les modifications' : 'Créer la Réservation')}
               </Button>
             </DialogFooter>
-            {initialBooking && (
+            {initialBooking && initialBooking.reservation_source !== 'owner_channel' && (
               <Button type="button" variant="destructive" className="w-full" disabled={isLoading || loadingKrossbookingRoomTypes} onClick={() => setConfirmCancellation(true)}>
                 Annuler ce blocage
               </Button>

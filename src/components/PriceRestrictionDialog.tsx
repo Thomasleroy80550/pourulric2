@@ -36,12 +36,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getOverrides, addOverrides, deleteOverride, PriceOverride, NewPriceOverride } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
+import ChannelCalendarPanel from '@/components/channel/ChannelCalendarPanel';
 
 interface PriceRestrictionDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   userRooms: UserRoom[];
   onSettingsSaved: () => void;
+  useChannelCalendar?: boolean;
 }
 
 const seasons = [
@@ -119,6 +121,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   onOpenChange,
   userRooms,
   onSettingsSaved,
+  useChannelCalendar = false,
 }) => {
   const [overrides, setOverrides] = useState<PriceOverride[]>([]);
   const [isLoadingOverrides, setIsLoadingOverrides] = useState(true);
@@ -162,11 +165,11 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !useChannelCalendar) {
       fetchDialogData();
       form.reset();
     }
-  }, [isOpen, form, userRooms]);
+  }, [isOpen, form, userRooms, useChannelCalendar]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log("DEBUG: onSubmit values:", values);
@@ -320,6 +323,22 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       console.error("Error during override deletion:", error);
     }
   };
+
+  if (useChannelCalendar) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90dvh] max-w-6xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Prix et disponibilités Cadence</DialogTitle>
+            <DialogDescription>
+              Données Cadence en lecture seule pour vos logements liés.
+            </DialogDescription>
+          </DialogHeader>
+          <ChannelCalendarPanel />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

@@ -30,6 +30,8 @@ export interface KrossbookingReservation {
   n_guests?: number;
   reservation_source?: "owner_channel";
   channel_property_id?: string;
+  channel_assignment_id?: string;
+  channel_block_id?: string;
   currency?: string;
   // Commissions OTA (uniquement pour les réservations OTA avec montant > 0)
   ota_commissions_collected?: number;

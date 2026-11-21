@@ -499,6 +499,15 @@ export async function handleChannelFeatures(
 
   if (body.action === "reviews_sync_start") {
     const assignment = await assignmentForRead(db, body.assignment_id, userId, isAdmin);
+    if (body.automatic === true) {
+      const { data: recent, error: recentError } = await db.from("channel_review_import_jobs").select("*")
+        .eq("assignment_id", assignment.id).eq("status", "completed")
+        .order("completed_at", { ascending: false }).limit(1).maybeSingle();
+      if (recentError) throw recentError;
+      if (recent?.completed_at && Date.now() - Date.parse(recent.completed_at) < 24 * 60 * 60 * 1000) {
+        return reviewJobResponse(recent);
+      }
+    }
     if (body.restart === true) {
       const { error } = await db.from("channel_review_import_jobs").update({
         status: "failed", last_error: "Import remplacé par une nouvelle synchronisation.", completed_at: new Date().toISOString(),

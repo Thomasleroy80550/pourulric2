@@ -99,7 +99,6 @@ const defaultSidebarSections = (isPaymentSuspended: boolean, isAdmin: boolean) =
       { name: 'Mes tickets', href: '/tickets', icon: MessageSquare },
       { name: 'Notifications', href: '/notifications', icon: Bell },
       { name: 'Mes logements', href: '/my-rooms', icon: Building, disabled: isPaymentSuspended },
-      { name: 'Portail Cadence', href: '/cadence', icon: Building, disabled: isPaymentSuspended },
 
     ],
 

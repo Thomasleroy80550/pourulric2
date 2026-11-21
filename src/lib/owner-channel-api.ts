@@ -11,6 +11,9 @@ export interface ChannelProperty {
   property_name?: string;
   description?: string;
   summary?: string;
+  short_description?: string;
+  long_description?: string;
+  details?: string;
   photos?: Array<string | ChannelPropertyPhoto>;
   images?: Array<string | ChannelPropertyPhoto>;
   pictures?: Array<string | ChannelPropertyPhoto>;
@@ -37,8 +40,15 @@ export interface ChannelPage {
 export class ChannelApiError extends Error {
   constructor(message: string, public retryAfter: number = 0) { super(message); }
 }
+function channelText(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  const record = value as Record<string, unknown>;
+  const localized = [record.fr, record.en, record.value, record.text, record.name].find(item => typeof item === "string" && item.trim());
+  return typeof localized === "string" ? localized.trim() : "";
+}
 export function channelPropertyName(property: ChannelProperty) {
-  return [property.name, property.title, property.property_name].find(value => typeof value === "string" && value.trim()) || property.id;
+  return [property.name, property.title, property.property_name].map(channelText).find(Boolean) || property.id;
 }
 
 async function invoke<T>(body: Record<string, unknown>): Promise<T> {

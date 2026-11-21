@@ -46,9 +46,10 @@ interface BookingPlanningGridStudioProps {
   onReservationChange: () => void;
   profile: UserProfile | null;
   debugFullWidth?: boolean;
+  replacedRoomIds?: Set<string>;
 }
 
-const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile, debugFullWidth = false }) => {
+const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ refreshTrigger, userRooms, reservations, onReservationChange, profile, debugFullWidth = false, replacedRoomIds }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [housekeepingTasks, setHousekeepingTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState<boolean>(true);
@@ -86,7 +87,8 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
     setLoadingTasks(true);
     setError(null);
     try {
-      const roomIdsAsNumbers = userRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
+      const legacyRooms = userRooms.filter(room => !replacedRoomIds?.has(room.room_id));
+      const roomIdsAsNumbers = legacyRooms.map(room => parseInt(room.room_id)).filter(id => !isNaN(id));
       if (roomIdsAsNumbers.length === 0) {
         setHousekeepingTasks([]);
         setLoadingTasks(false);
@@ -106,9 +108,15 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
 
   useEffect(() => {
     loadHousekeepingTasks();
-  }, [currentMonth, userRooms, refreshTrigger]);
+  }, [currentMonth, userRooms, refreshTrigger, replacedRoomIds]);
 
   useEffect(() => {
+    const hasLegacyRooms = userRooms.some(room => !replacedRoomIds?.has(room.room_id));
+    if (!hasLegacyRooms) {
+      setKrossbookingRoomTypes([]);
+      setLoadingRoomTypes(false);
+      return;
+    }
     const loadRoomTypes = async () => {
       setLoadingRoomTypes(true);
       try {
@@ -122,7 +130,7 @@ const BookingPlanningGridStudio: React.FC<BookingPlanningGridStudioProps> = ({ r
       }
     };
     loadRoomTypes();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, userRooms, replacedRoomIds]);
 
   const daysInMonth = useMemo(() => {
     const start = startOfMonth(currentMonth);

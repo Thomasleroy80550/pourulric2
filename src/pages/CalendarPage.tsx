@@ -423,6 +423,7 @@ const CalendarPage: React.FC = () => {
           userRooms={userRooms}
           onSettingsSaved={handlePriceRestrictionSaved}
           useChannelCalendar={hasChannelRooms}
+          channelSources={channelFeed.sources}
         />
         <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
           <AlertDialogContent>
@@ -533,6 +534,7 @@ const CalendarPage: React.FC = () => {
                       reservations={reservations}
                       onReservationChange={handleReservationChange}
                       profile={profile}
+                      replacedRoomIds={channelFeed.replacedRoomIds}
                     />
                   </div>
                 )}
@@ -576,6 +578,7 @@ const CalendarPage: React.FC = () => {
                       onReservationChange={handleReservationChange}
                       profile={profile}
                       debugFullWidth
+                      replacedRoomIds={channelFeed.replacedRoomIds}
                     />
                   </div>
                 )}
@@ -601,6 +604,7 @@ const CalendarPage: React.FC = () => {
         userRooms={userRooms}
         onSettingsSaved={handlePriceRestrictionSaved}
         useChannelCalendar={hasChannelRooms}
+        channelSources={channelFeed.sources}
       />
       <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
         <AlertDialogContent>

@@ -102,7 +102,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [confirmCancellation, setConfirmCancellation] = useState(false);
   const queryClient = useQueryClient();
-  const { data: channelSources = [] } = useQuery({
+  const { data: channelSources = [], isSuccess: channelSourcesLoaded } = useQuery({
     queryKey: ['owner-reservation-sources', profile?.id],
     enabled: isOpen && Boolean(profile?.id),
     staleTime: 60 * 1000,
@@ -122,6 +122,8 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
     const room = userRooms.find(item => item.room_id === roomId);
     return channelSources.find(source => source.user_rooms?.id === room?.id);
   }, [channelSources, userRooms]);
+  const selectableRooms = userRooms.filter(room => !room.room_id.startsWith('channel:'));
+  const allRoomsLinkedToCadence = channelSourcesLoaded && selectableRooms.length > 0 && selectableRooms.every(room => Boolean(channelSourceForRoom(room.room_id)));
 
   React.useEffect(() => {
     setError(null);
@@ -139,8 +141,13 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
       }
     };
 
-    if (isOpen) {
-      loadRoomTypes();
+    if (isOpen && channelSourcesLoaded) {
+      if (allRoomsLinkedToCadence) {
+        setKrossbookingRoomTypes([]);
+        setLoadingKrossbookingRoomTypes(false);
+      } else {
+        loadRoomTypes();
+      }
       if (initialBooking) {
         let blockTypeFound = '';
         for (const type of blockTypes) {
@@ -177,7 +184,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
         });
       }
     }
-  }, [isOpen, initialBooking, form]);
+  }, [isOpen, initialBooking, form, channelSourcesLoaded, allRoomsLinkedToCadence]);
 
   console.log("OwnerReservationDialog - Profile prop:", profile);
   const krossbookingPropertyId = profile?.krossbooking_property_id;
@@ -387,7 +394,7 @@ const OwnerReservationDialog: React.FC<OwnerReservationDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {userRooms.filter(room => !room.room_id.startsWith('channel:')).map((room) => (
+                      {selectableRooms.map((room) => (
                         <SelectItem key={room.id} value={room.room_id}>
                           {room.room_name}
                         </SelectItem>

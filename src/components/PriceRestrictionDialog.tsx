@@ -37,6 +37,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { getOverrides, addOverrides, deleteOverride, PriceOverride, NewPriceOverride } from '@/lib/price-override-api';
 import { Skeleton } from '@/components/ui/skeleton';
 import ChannelCalendarPanel from '@/components/channel/ChannelCalendarPanel';
+import type { ReservationSource } from '@/lib/channel-reservations-api';
 
 interface PriceRestrictionDialogProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ interface PriceRestrictionDialogProps {
   userRooms: UserRoom[];
   onSettingsSaved: () => void;
   useChannelCalendar?: boolean;
+  channelSources?: ReservationSource[];
 }
 
 const seasons = [
@@ -122,6 +124,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   userRooms,
   onSettingsSaved,
   useChannelCalendar = false,
+  channelSources = [],
 }) => {
   const [overrides, setOverrides] = useState<PriceOverride[]>([]);
   const [isLoadingOverrides, setIsLoadingOverrides] = useState(true);
@@ -129,6 +132,10 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
   // but not directly used for id_room_type mapping anymore.
   const [roomTypes, setRoomTypes] = useState<KrossbookingRoomType[]>([]);
   const [isLoadingRoomTypes, setIsLoadingRoomTypes] = useState(true);
+  const [channelAssignmentId, setChannelAssignmentId] = useState('');
+  const linkedChannelSources = channelSources.filter(source =>
+    source.user_room_id && userRooms.some(room => room.id === source.user_room_id)
+  );
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -170,6 +177,12 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
       form.reset();
     }
   }, [isOpen, form, userRooms, useChannelCalendar]);
+
+  useEffect(() => {
+    if (isOpen && useChannelCalendar) {
+      setChannelAssignmentId(current => linkedChannelSources.some(source => source.id === current) ? current : linkedChannelSources[0]?.id || '');
+    }
+  }, [isOpen, useChannelCalendar, channelSources, userRooms]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log("DEBUG: onSubmit values:", values);
@@ -334,7 +347,18 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
               Données Cadence en lecture seule pour vos logements liés.
             </DialogDescription>
           </DialogHeader>
-          <ChannelCalendarPanel />
+          <div className="max-w-md space-y-2">
+            <FormLabel>Logement Cadence</FormLabel>
+            <Select value={channelAssignmentId} onValueChange={setChannelAssignmentId} disabled={!linkedChannelSources.length}>
+              <SelectTrigger><SelectValue placeholder="Choisir un logement lié" /></SelectTrigger>
+              <SelectContent>
+                {linkedChannelSources.map(source => (
+                  <SelectItem key={source.id} value={source.id}>{source.property_name || source.user_rooms?.room_name || source.property_id}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {channelAssignmentId ? <ChannelCalendarPanel assignmentId={channelAssignmentId} /> : <p className="text-sm text-muted-foreground">Aucun logement Cadence lié n’est disponible.</p>}
         </DialogContent>
       </Dialog>
     );
@@ -432,7 +456,7 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
                             initialFocus
                             mode="range"
                             defaultMonth={field.value?.from}
-                            selected={field.value}
+                            selected={field.value?.from ? { from: field.value.from, to: field.value.to } : undefined}
                             onSelect={field.onChange}
                             numberOfMonths={1}
                             locale={fr}

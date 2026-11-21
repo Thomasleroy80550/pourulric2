@@ -180,8 +180,8 @@ export function getChannelCleaningDetail(input: {
 export const getChannelReviewsCache = (assignmentId: string, offset = 0, limit = 50) =>
   request<ChannelReviewsCache>({ action: "reviews_cache", assignment_id: assignmentId, offset, limit });
 
-export const startChannelReviewsSync = (assignmentId: string, restart = false) =>
-  request<ChannelReviewImport>({ action: "reviews_sync_start", assignment_id: assignmentId, restart });
+export const startChannelReviewsSync = (assignmentId: string, restart = false, automatic = false) =>
+  request<ChannelReviewImport>({ action: "reviews_sync_start", assignment_id: assignmentId, restart, automatic });
 
 export const advanceChannelReviewsSync = (jobId: string) =>
   request<ChannelReviewImport>({ action: "reviews_sync_page", job_id: jobId });

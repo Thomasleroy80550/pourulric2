@@ -1,6 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO, isValid } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getReservationSources, type ReservationSource } from './channel-reservations-api';
+import { advanceChannelReviewsSync, startChannelReviewsSync } from './channel-features-api';
 
 export interface Review {
   id: string;
@@ -8,96 +10,142 @@ export interface Review {
   avatar: string;
   rating: number;
   date: string;
-  /** Date ISO brute (review_date) pour les agrégations/graphiques. */
+  /** Date ISO brute pour les agrégations/graphiques. */
   rawDate: string;
   comment: string;
   source: string;
 }
 
-interface KrossbookingReviewRow {
-  id_review: number;
-  room_name: string | null;
-  name_room_type: string | null;
-  review_date: string | null;
-  cod_channel: string | null;
-  review_title: string | null;
-  review_text: string | null;
+interface ChannelReviewRow {
+  property_id: string;
+  agency_id: string;
+  environment: string;
+  review_id: string;
+  channel_id: string | null;
+  title: string | null;
+  content: string | null;
+  reviewer_name: string | null;
   rating: number | null;
+  rating_scale: number | null;
+  created_label: string | null;
+  payload: Record<string, unknown>;
+  imported_at: string;
 }
 
-// Certaines OTA (ex: Booking) notent sur 10, on ramène tout sur une échelle de 5.
-function normalizeRatingToFive(rating: number | null): number {
+function normalizeRatingToFive(rating: number | null, ratingScale: number | null): number {
   if (rating === null || !Number.isFinite(rating) || rating <= 0) return 0;
+  if (ratingScale && ratingScale > 0) return Math.round((rating / ratingScale) * 50) / 10;
   const normalized = rating > 5 ? rating / 2 : rating;
   return Math.round(normalized * 10) / 10;
 }
 
-function formatReviewDate(value: string | null): string {
-  if (!value) return '';
-  const parsed = parseISO(value);
-  return isValid(parsed) ? format(parsed, 'd MMMM yyyy', { locale: fr }) : value;
+function payloadDate(payload: Record<string, unknown>): string | null {
+  const value = ['created_at', 'createdAt', 'review_date', 'reviewDate', 'date']
+    .map(key => payload[key])
+    .find(item => typeof item === 'string' && isValid(parseISO(item)));
+  return typeof value === 'string' ? value : null;
 }
 
-function mapRow(row: KrossbookingReviewRow): Review {
-  const title = (row.review_title || '').trim();
-  const text = (row.review_text || '').trim();
-  const comment = [title, text].filter(Boolean).join(' — ');
+function formatReviewDate(value: string | null, fallback: string | null): string {
+  if (value) {
+    const parsed = parseISO(value);
+    if (isValid(parsed)) return format(parsed, 'd MMMM yyyy', { locale: fr });
+  }
+  return fallback || '';
+}
+
+function mapRow(row: ChannelReviewRow): Review {
+  const title = (row.title || '').trim();
+  const text = (row.content || '').trim();
+  const rawDate = payloadDate(row.payload) || row.imported_at;
 
   return {
-    id: String(row.id_review),
-    author: row.room_name?.trim() || row.name_room_type?.trim() || 'Client',
+    id: `${row.property_id}:${row.review_id}`,
+    author: row.reviewer_name?.trim() || 'Voyageur',
     avatar: '',
-    rating: normalizeRatingToFive(row.rating),
-    date: formatReviewDate(row.review_date),
-    rawDate: row.review_date || '',
-    comment,
-    source: row.cod_channel || '',
+    rating: normalizeRatingToFive(row.rating, row.rating_scale),
+    date: formatReviewDate(rawDate, row.created_label),
+    rawDate,
+    comment: [title, text].filter(Boolean).join(' — '),
+    source: row.channel_id || 'CADENCE',
   };
 }
 
-/**
- * Récupère les avis OTA de l'utilisateur depuis la table `krossbooking_reviews`,
- * alimentée quotidiennement par le scan global (edge function scan-krossbooking-reviews).
- * Le RLS garantit que chaque utilisateur ne voit que ses avis (les admins voient tout).
- */
+async function getAllSources(): Promise<ReservationSource[]> {
+  const sources: ReservationSource[] = [];
+  let cursor: string | null = null;
+  do {
+    const page = await getReservationSources(cursor);
+    sources.push(...page.sources);
+    cursor = page.next_cursor;
+  } while (cursor);
+  return sources;
+}
+
+async function syncSourceReviews(source: ReservationSource): Promise<void> {
+  let job = await startChannelReviewsSync(source.id, false, true);
+  let guard = 0;
+  while (job.status === 'syncing' && guard < 100) {
+    job = await advanceChannelReviewsSync(job.job_id);
+    guard += 1;
+  }
+}
+
+/** Synchronise les avis Cadence du propriétaire connecté au maximum une fois par 24 h par logement. */
+async function syncCurrentOwnerReviews(): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return;
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', auth.user.id).maybeSingle();
+  if (profile?.role !== 'user') return;
+
+  const sources = await getAllSources();
+  for (const source of sources) {
+    try {
+      await syncSourceReviews(source);
+    } catch (error) {
+      console.warn('Cadence review synchronization skipped:', error);
+    }
+  }
+}
+
+/** Récupère les avis Cadence persistés côté serveur ; le RLS limite chaque propriétaire à ses logements attribués. */
 export async function getReviews(): Promise<Review[]> {
-  // Supabase (PostgREST) plafonne chaque requête à 1000 lignes par défaut.
-  // On pagine donc par lots de 1000 pour récupérer la totalité des avis.
+  try {
+    await syncCurrentOwnerReviews();
+  } catch (error) {
+    console.warn('Cadence review synchronization unavailable:', error);
+  }
+
   const PAGE_SIZE = 1000;
-  const allRows: KrossbookingReviewRow[] = [];
+  const allRows: ChannelReviewRow[] = [];
   let from = 0;
 
   while (true) {
     const { data, error } = await supabase
-      .from('krossbooking_reviews')
-      .select('id_review, room_name, name_room_type, review_date, cod_channel, review_title, review_text, rating')
-      .order('review_date', { ascending: false })
+      .from('channel_reviews')
+      .select('property_id,agency_id,environment,review_id,channel_id,title,content,reviewer_name,rating,rating_scale,created_label,payload,imported_at')
+      .order('imported_at', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
 
     if (error) {
-      console.error('Error fetching reviews from krossbooking_reviews:', error);
+      console.error('Error fetching reviews from channel_reviews:', error);
       return allRows.map(mapRow);
     }
 
-    const rows = (data ?? []) as KrossbookingReviewRow[];
+    const rows = (data ?? []) as ChannelReviewRow[];
     allRows.push(...rows);
 
     if (rows.length < PAGE_SIZE) break;
     from += PAGE_SIZE;
   }
 
-  return allRows.map(mapRow);
+  return allRows.map(mapRow).sort((a, b) => Date.parse(b.rawDate) - Date.parse(a.rawDate));
 }
 
-/**
- * Génère une synthèse des avis via l'Edge Function review-analyzer,
- * à partir des commentaires des avis récupérés.
- */
+/** Génère une synthèse des avis via l'Edge Function review-analyzer. */
 export async function getReviewSynthesis(reviews: Review[]): Promise<string> {
   const comments = reviews.map((review) => review.comment).filter(Boolean);
-  if (comments.length === 0) {
-    return '';
-  }
+  if (comments.length === 0) return '';
 
   const { data, error } = await supabase.functions.invoke('review-analyzer', {
     body: { comments },

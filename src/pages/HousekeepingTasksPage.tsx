@@ -35,11 +35,13 @@ import {
   LogIn,
   LogOut,
   Search,
+  Camera,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isValid, startOfMonth, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { fetchClientHousekeepingTasks, HousekeepingTask } from '@/lib/housekeeping-api';
+import ChannelCleaningDetailDialog from '@/components/ChannelCleaningDetailDialog';
 
 type TaskTypeFilter = 'all' | 'cleaning' | 'task' | 'maintenance';
 
@@ -89,6 +91,7 @@ const HousekeepingTasksPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedTask, setSelectedTask] = useState<HousekeepingTask | null>(null);
 
   const loadTasks = useCallback(async () => {
     setLoading(true);
@@ -310,6 +313,9 @@ const HousekeepingTasksPage: React.FC = () => {
                               {task.note && (
                                 <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{task.note}</div>
                               )}
+                              <Button type="button" variant="link" size="sm" className="mt-1 h-auto p-0 text-xs" onClick={() => setSelectedTask(task)}>
+                                <Camera className="mr-1 h-3.5 w-3.5" /> Voir les photos
+                              </Button>
                             </TableCell>
 
                             {/* Type */}
@@ -379,6 +385,7 @@ const HousekeepingTasksPage: React.FC = () => {
           </div>
         )}
       </div>
+      <ChannelCleaningDetailDialog task={selectedTask} open={!!selectedTask} onOpenChange={open => { if (!open) setSelectedTask(null); }} />
     </MainLayout>
   );
 };

@@ -37,6 +37,25 @@ export interface ChannelPricingPeriod extends ChannelPricingPeriodInput {
   label: string | null;
   max_stay: number | null;
 }
+export type ChannelPricingSource = "owner" | "cadence" | "beyond" | "default";
+export interface ChannelPricingReadPeriod {
+  id: string;
+  source: ChannelPricingSource;
+  label: string | null;
+  start_date: string;
+  end_date: string;
+  price: number;
+  min_stay: number | null;
+  max_stay: number | null;
+}
+export interface ChannelPricingRead {
+  property_id: string;
+  currency: string;
+  base_price: number;
+  beyond_linked: boolean;
+  periods: ChannelPricingReadPeriod[];
+  periods_updated_at: string;
+}
 export interface ChannelPricingReplaceResult {
   property_id: string;
   periods_applied: number;
@@ -142,6 +161,9 @@ async function request<T>(body: Record<string, unknown>): Promise<T> {
 
 export const getChannelCalendar = (assignmentId: string, from?: string, to?: string) =>
   request<ChannelCalendar>({ action: "calendar", assignment_id: assignmentId, ...(from ? { from } : {}), ...(to ? { to } : {}) });
+
+export const getChannelPricing = (assignmentId: string) =>
+  request<ChannelPricingRead>({ action: "pricing_read", assignment_id: assignmentId });
 
 export const replaceChannelPricing = (assignmentId: string, periods: ChannelPricingPeriodInput[]) =>
   request<ChannelPricingReplaceResult>({ action: "pricing_replace", assignment_id: assignmentId, periods });

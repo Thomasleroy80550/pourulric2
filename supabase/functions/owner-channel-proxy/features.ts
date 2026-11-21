@@ -7,6 +7,7 @@ const availabilityValues = new Set(["booked", "blocked", "available", "unknown"]
 const blockStatuses = new Set(["active", "owner_pending"]);
 const cleaningStatuses = new Set(["todo", "in_progress", "done"]);
 const photoPhases = new Set(["before", "after"]);
+const pricingSources = new Set(["owner", "cadence", "beyond", "default"]);
 
 export class ChannelFeatureError extends Error {
   constructor(public status: number, message: string, public retryAfter = 0) {
@@ -226,6 +227,47 @@ function validatePricingPeriods(value: unknown) {
   return periods;
 }
 
+function validatePricingRead(payload: Record<string, unknown>, assignment: Assignment) {
+  if (typeof payload.property_id !== "string" || payload.property_id.toLowerCase() !== assignment.property_id.toLowerCase() ||
+      typeof payload.currency !== "string" || !payload.currency.trim() || payload.currency.length > 10 ||
+      typeof payload.base_price !== "number" || !Number.isFinite(payload.base_price) ||
+      typeof payload.beyond_linked !== "boolean" || !Array.isArray(payload.periods) ||
+      typeof payload.periods_updated_at !== "string" || Number.isNaN(Date.parse(payload.periods_updated_at))) {
+    throw new ChannelFeatureError(502, "Réponse de lecture des prix non conforme au contrat API.");
+  }
+  const periods = payload.periods.map((item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new ChannelFeatureError(502, "Réponse de lecture des prix non conforme au contrat API.");
+    const period = item as Record<string, unknown>;
+    const nullableInteger = (value: unknown) => value === null || (typeof value === "number" && Number.isInteger(value) && value >= 0);
+    if (typeof period.id !== "string" || !period.id.trim() || period.id.length > 200 ||
+        typeof period.source !== "string" || !pricingSources.has(period.source) ||
+        (period.label != null && (typeof period.label !== "string" || period.label.length > 500)) ||
+        !validDate(period.start_date) || !validDate(period.end_date) || period.start_date > period.end_date ||
+        typeof period.price !== "number" || !Number.isFinite(period.price) || period.price < 0 ||
+        !nullableInteger(period.min_stay) || !nullableInteger(period.max_stay)) {
+      throw new ChannelFeatureError(502, "Réponse de lecture des prix non conforme au contrat API.");
+    }
+    return {
+      id: period.id,
+      source: period.source,
+      label: period.label ?? null,
+      start_date: period.start_date,
+      end_date: period.end_date,
+      price: period.price,
+      min_stay: period.min_stay,
+      max_stay: period.max_stay,
+    };
+  });
+  return {
+    property_id: assignment.property_id,
+    currency: payload.currency,
+    base_price: payload.base_price,
+    beyond_linked: payload.beyond_linked,
+    periods,
+    periods_updated_at: payload.periods_updated_at,
+  };
+}
+
 function validatePricingResponse(payload: Record<string, unknown>, assignment: Assignment) {
   if (typeof payload.property_id !== "string" || payload.property_id.toLowerCase() !== assignment.property_id.toLowerCase() ||
       typeof payload.periods_applied !== "number" || !Number.isInteger(payload.periods_applied) || payload.periods_applied < 0 ||
@@ -435,9 +477,17 @@ export async function handleChannelFeatures(
     return { property_id: assignment.property_id, images: returnedImages, photos_updated: payload.photos_updated };
   }
 
+  if (body.action === "pricing_read") {
+    const assignment = await assignmentForRead(db, body.assignment_id, userId, isAdmin);
+    const payload = await callCadence("owner-site-pricing", { params: { property_id: assignment.property_id } });
+    return validatePricingRead(payload, assignment);
+  }
+
   if (body.action === "pricing_replace") {
     if (isAdmin) throw new ChannelFeatureError(403, "Les périodes tarifaires propriétaire doivent être modifiées depuis le profil attribué.");
     const assignment = await assignmentForOwnerWrite(db, body.assignment_id, userId);
+    const existing = validatePricingRead(await callCadence("owner-site-pricing", { params: { property_id: assignment.property_id } }), assignment);
+    if (existing.beyond_linked) throw new ChannelFeatureError(409, "Ce logement est lié à Beyond : ses prix et restrictions viennent de Beyond");
     const periods = validatePricingPeriods(body.periods);
     const payload = await callCadence("owner-site-pricing", {
       method: "POST",

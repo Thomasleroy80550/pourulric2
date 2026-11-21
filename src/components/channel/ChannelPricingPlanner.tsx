@@ -115,6 +115,23 @@ const sourceDotClasses: Record<ChannelPricingSource, string> = {
   default: "bg-slate-400",
 };
 
+const OTA_MARKUPS = [
+  { name: "Airbnb", multiplier: 1.17, color: "#ff385c" },
+  { name: "Booking.com", multiplier: 1.19, color: "#016ce4" },
+  { name: "Abritel / Vrbo", multiplier: 1.17, color: "#0067db" },
+] as const;
+
+function otaPrice(price: number, multiplier: number) {
+  return Math.round(price * multiplier);
+}
+
+function otaPriceRange(price: number | null, currency: string, compact = false) {
+  if (price === null || !Number.isFinite(price)) return null;
+  const prices = OTA_MARKUPS.map(channel => otaPrice(price, channel.multiplier));
+  const range = `${Math.min(...prices)}–${Math.max(...prices)}`;
+  return compact ? `${range} ${currency === "EUR" ? "€" : currency}` : `${range} ${currency}`;
+}
+
 function newDraft(): DraftPeriod {
   return { key: crypto.randomUUID(), start_date: "", end_date: "", price: "", min_stay: "1", max_stay: "", label: "" };
 }
@@ -614,6 +631,20 @@ export default function ChannelPricingPlanner() {
             </div>
           </div>
 
+          {editor?.price && Number.isFinite(Number(editor.price)) && Number(editor.price) >= 0 && (
+            <div className="rounded-lg border bg-muted/10 p-3">
+              <p className="mb-2 text-sm font-medium">Prix estimés sur les OTA</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {OTA_MARKUPS.map(channel => (
+                  <div key={channel.name} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm" style={{ borderColor: channel.color, backgroundColor: `${channel.color}1A` }}>
+                    <span className="font-medium" style={{ color: channel.color }}>{channel.name} +{Math.round((channel.multiplier - 1) * 100)}%</span>
+                    <span className="font-semibold tabular-nums">{formatPrice(otaPrice(Number(editor.price), channel.multiplier), selectedCurrency)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <details className="rounded-lg border bg-muted/10 px-3 py-2">
             <summary className="cursor-pointer text-sm text-muted-foreground">Options avancées</summary>
             <div className="grid gap-3 pt-3 md:grid-cols-2">
@@ -632,6 +663,7 @@ export default function ChannelPricingPlanner() {
                       <span className="font-medium">{draft.label || "Période"}</span>
                       <span className="ml-2 text-muted-foreground">{draft.start_date} → {draft.end_date}</span>
                       <span className="ml-2 font-semibold text-emerald-600">{formatPrice(draft.price ? Number(draft.price) : null, selectedCurrency)}</span>
+                      {draft.price && otaPriceRange(Number(draft.price), selectedCurrency) && <span className="ml-2 text-muted-foreground">OTA {otaPriceRange(Number(draft.price), selectedCurrency)}</span>}
                     </button>
                     <button type="button" onClick={() => removeDraft(selectedAssignmentId, draft.key)} disabled={selectedPricing?.beyond_linked || saving} aria-label="Supprimer cette période" className="rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40">
                       <X className="h-3.5 w-3.5" />
@@ -647,7 +679,7 @@ export default function ChannelPricingPlanner() {
                 <div className="flex flex-wrap gap-2">
                   {cadencePeriods.map(period => (
                     <span key={period.id} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                      {period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)}
+                      {period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)} · OTA {otaPriceRange(period.price, selectedCurrency)}
                     </span>
                   ))}
                   {beyondPeriods.length > 0 && (
@@ -702,7 +734,7 @@ export default function ChannelPricingPlanner() {
               )}
               <div className="space-y-1 text-xs text-muted-foreground">
                 {selectedApplied.periods.length
-                  ? selectedApplied.periods.map(period => <p key={period.id}>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)} · {period.min_stay} nuit(s) min.</p>)
+                  ? selectedApplied.periods.map(period => <p key={period.id}>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)} · {period.min_stay} nuit(s) min. · OTA {otaPriceRange(period.price, selectedCurrency)}</p>)
                   : <p>Aucune plage n’a été appliquée par Cadence.</p>}
               </div>
             </div>
@@ -721,6 +753,7 @@ export default function ChannelPricingPlanner() {
           <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-orange-500" /> Beyond</span>
           <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-slate-400" /> Prix de base</span>
           <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-indigo-500" /> Réservé / bloqué</span>
+          <span>OTA : estimation avec markup Airbnb / Booking / Abritel</span>
         </div>
       </div>
 
@@ -776,9 +809,10 @@ export default function ChannelPricingPlanner() {
                         const editingDraft = editingKey && selectedAssignmentId === source.id ? selectedDrafts.find(draft => draft.key === editingKey) : null;
                         const editing = Boolean(editingDraft && date >= editingDraft.start_date && date <= editingDraft.end_date);
                         const label = unavailable ? (calendarDay?.availability === "booked" ? "Réservé" : "Bloqué") : null;
+                        const otaRange = otaPriceRange(daily.price, plan.pricing?.currency ?? "EUR", true);
                         const title = unavailable
                           ? `${name} · ${format(day, "d MMMM", { locale: fr })} · ${label}`
-                          : `${name} · ${format(day, "d MMMM", { locale: fr })} · ${fullPrice(daily.price, plan.pricing?.currency ?? "EUR")} · ${daily.min_stay ?? "—"} nuits min. · ${sourceLabels[daily.source]}`;
+                          : `${name} · ${format(day, "d MMMM", { locale: fr })} · ${fullPrice(daily.price, plan.pricing?.currency ?? "EUR")}${otaRange ? ` · OTA ${otaRange}` : ""} · ${daily.min_stay ?? "—"} nuits min. · ${sourceLabels[daily.source]}`;
                         return (
                           <button
                             key={date}
@@ -802,7 +836,8 @@ export default function ChannelPricingPlanner() {
                             ) : (
                               <>
                                 <span className={cn("text-sm font-semibold", daily.source === "owner" && "text-emerald-700 dark:text-emerald-300", daily.source === "cadence" && "text-amber-700 dark:text-amber-300", daily.source === "beyond" && "text-orange-700 dark:text-orange-300")}>{formatPrice(daily.price, plan.pricing?.currency ?? "EUR")}</span>
-                                <span className="mt-1 text-[10px] text-muted-foreground">{daily.min_stay ? `${daily.min_stay} nuits min.` : "—"}</span>
+                                {otaRange && <span className="mt-0.5 text-[9px] font-medium text-slate-500 dark:text-slate-400">OTA {otaRange}</span>}
+                                <span className="mt-0.5 text-[10px] text-muted-foreground">{daily.min_stay ? `${daily.min_stay} nuits min.` : "—"}</span>
                               </>
                             )}
                           </button>

@@ -59,7 +59,7 @@ serve(async (req) => {
     const body = await req.json().catch(() => null);
     if (!body || typeof body.action !== "string") return json({ error: "Action requise." }, 400);
     const isAdmin = profile.role === "admin";
-    const adminActions = ["catalog", "assignments", "assign", "unassign", "link_room", "onboarding_context", "assign_batch"];
+    const adminActions = ["catalog", "property_detail", "assignments", "assign", "unassign", "link_room", "onboarding_context", "assign_batch"];
     if (adminActions.includes(body.action) && !isAdmin) return json({ error: "Accès réservé aux administrateurs." }, 403);
 
     if (["reservation_sources", "reservation_cache", "reservation_sync_start", "reservation_sync_page"].includes(body.action)) {
@@ -76,6 +76,13 @@ serve(async (req) => {
     if (body.action === "catalog") {
       if (body.cursor != null && (typeof body.cursor !== "string" || body.cursor.length > 4096)) return json({ error: "Curseur invalide." }, 400);
       return json(await upstream({ limit: "100", ...(body.cursor ? { cursor: body.cursor } : {}) }));
+    }
+    if (body.action === "property_detail") {
+      if (typeof body.property_id !== "string" || !uuid.test(body.property_id)) return json({ error: "UUID de logement invalide." }, 400);
+      const detail = await upstream({ property_id: body.property_id });
+      const property = detail.properties.find((item: { id: string }) => item.id.toLowerCase() === body.property_id.toLowerCase());
+      if (property) console.info("[owner-channel-proxy] property detail fields", { propertyId: body.property_id, fields: Object.keys(property) });
+      return json(detail);
     }
     if (["assignments", "assign"].includes(body.action) && (typeof body.client_profile_id !== "string" || !uuid.test(body.client_profile_id))) {
       return json({ error: "Identifiant de profil invalide." }, 400);
@@ -136,13 +143,16 @@ serve(async (req) => {
           const detail = await upstream({ property_id: link.property_id });
           if (detail.agency_id === link.agency_id && detail.environment === link.environment) {
             const property = detail.properties.find((p: { id: string }) => p.id.toLowerCase() === link.property_id.toLowerCase());
-            if (property) properties.push({
-              ...property,
-              agency_id: detail.agency_id,
-              environment: detail.environment,
-              assignment_id: link.id,
-              user_room_id: link.user_room_id,
-            });
+            if (property) {
+              console.info("[owner-channel-proxy] property detail fields", { propertyId: link.property_id, fields: Object.keys(property) });
+              properties.push({
+                ...property,
+                agency_id: detail.agency_id,
+                environment: detail.environment,
+                assignment_id: link.id,
+                user_room_id: link.user_room_id,
+              });
+            }
           }
         } catch (error) {
           if (error instanceof RequestError && error.status === 404) continue;

@@ -97,15 +97,30 @@ function collectEquipment(value: unknown, output: string[]): void {
   }
   if (!value || typeof value !== "object") return;
   const record = value as Record<string, unknown>;
-  const direct = localizedText(record);
+  const coded = [record.code, record.key, record.slug, record.id].find(item => typeof item === "string" && item.trim());
+  const direct = localizedText(record) || (typeof coded === "string" ? coded : "");
   const enabled = record.enabled !== false && record.available !== false && record.present !== false && record.value !== false;
   if (direct && enabled) {
     output.push(humanizeEquipmentLabel(direct));
     return;
   }
   Object.entries(record).forEach(([key, item]) => {
-    if (item === true) output.push(humanizeEquipmentLabel(key));
+    if (item === true || (typeof item === "number" && item > 0) || item === "true" || item === "yes") output.push(humanizeEquipmentLabel(key));
     else if (Array.isArray(item)) collectEquipment(item, output);
+  });
+}
+
+function collectNamedEquipmentFields(value: unknown, output: string[], depth = 0, visited = new Set<object>()): void {
+  if (depth > 5 || !value || typeof value !== "object") return;
+  if (visited.has(value)) return;
+  visited.add(value);
+  if (Array.isArray(value)) {
+    value.forEach(item => collectNamedEquipmentFields(item, output, depth + 1, visited));
+    return;
+  }
+  Object.entries(value as Record<string, unknown>).forEach(([key, item]) => {
+    if (/amenit|equip|feature|facilit/i.test(key)) collectEquipment(item, output);
+    collectNamedEquipmentFields(item, output, depth + 1, visited);
   });
 }
 
@@ -113,6 +128,7 @@ export function channelPropertyEquipments(property: ChannelProperty): string[] {
   const output: string[] = [];
   [property.amenities, property.equipment, property.equipments, property.features, property.facilities]
     .forEach(value => collectEquipment(value, output));
+  collectNamedEquipmentFields(property, output);
   const seen = new Set<string>();
   return output.filter(label => {
     const key = label.toLowerCase();

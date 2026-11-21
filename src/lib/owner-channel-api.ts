@@ -69,6 +69,7 @@ async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   return data as T;
 }
 export const getChannelCatalog = (cursor: string | null = null) => invoke<ChannelPage>({ action: "catalog", cursor });
+export const getChannelPropertyDetail = (propertyId: string) => invoke<ChannelPage>({ action: "property_detail", property_id: propertyId });
 export const getMyChannelProperties = (cursor: string | null = null) => invoke<ChannelPage>({ action: "mine", cursor });
 export const getChannelAssignments = (clientProfileId: string) => invoke<{ assignments: ChannelAssignment[] }>({ action: "assignments", client_profile_id: clientProfileId });
 export const assignChannelProperty = (clientProfileId: string, propertyId: string) => invoke<{ success: boolean }>({ action: "assign", client_profile_id: clientProfileId, property_id: propertyId });

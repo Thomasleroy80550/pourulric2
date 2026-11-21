@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   assignChannelProperty, ChannelApiError, ChannelAssignment, ChannelProperty, channelPropertyName,
-  getChannelAssignments, getChannelCatalog, linkChannelAssignmentRoom, unassignChannelProperty,
+  getChannelAssignments, getChannelCatalog, getChannelPropertyDetail, linkChannelAssignmentRoom, unassignChannelProperty,
 } from "@/lib/owner-channel-api";
+import { channelPropertyScopeKey, getChannelPhotoOrders } from "@/lib/channel-photo-order-api";
+import ChannelPropertySummary from "@/components/ChannelPropertySummary";
 
 export default function ChannelPropertyAssignments({ clientProfileId }: { clientProfileId: string }) {
   const [assignments, setAssignments] = useState<ChannelAssignment[]>([]);
@@ -23,6 +27,15 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
   const [error, setError] = useState("");
   const [retryAt, setRetryAt] = useState(0);
   const [search, setSearch] = useState("");
+  const [detailAssignment, setDetailAssignment] = useState<ChannelAssignment | null>(null);
+  const [detailProperty, setDetailProperty] = useState<ChannelProperty | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const { data: photoOrders = new Map<string, string[]>() } = useQuery({
+    queryKey: ["channel-photo-orders", "admin"],
+    queryFn: getChannelPhotoOrders,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
 
   useEffect(() => {
     let active = true;
@@ -81,6 +94,24 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
       toast.success(userRoomId === "none" ? "Lien local retiré." : "Logement local lié explicitement.");
     } catch (error) { fail(error); } finally { setBusy(false); }
   };
+  const openPropertyDetail = async (assignment: ChannelAssignment) => {
+    setDetailAssignment(assignment);
+    setDetailProperty(null);
+    setDetailLoading(true);
+    setError("");
+    try {
+      const detail = await getChannelPropertyDetail(assignment.property_id);
+      const property = detail.properties.find(item => item.id.toLowerCase() === assignment.property_id.toLowerCase());
+      if (!property || detail.agency_id !== assignment.agency_id || detail.environment !== assignment.environment) {
+        throw new Error("Le logement Cadence ne correspond plus à cette attribution.");
+      }
+      setDetailProperty({ ...property, agency_id: detail.agency_id, environment: detail.environment });
+    } catch (error) {
+      fail(error);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
   const remove = async (id: string) => {
     setBusy(true); setError("");
     try {
@@ -118,7 +149,10 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
                   </Select>
                 </div>
               </div>
-              <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => remove(link.id)}>Retirer l’attribution</Button>
+              <div className="flex shrink-0 flex-wrap gap-2">
+                <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => void openPropertyDetail(link)}>Photos / équipements</Button>
+                <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => remove(link.id)}>Retirer l’attribution</Button>
+              </div>
             </div>
           ))}
         </div>
@@ -142,6 +176,22 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
           {!cursor && <p className="text-xs text-muted-foreground">Tous les logements accessibles à la clé ont été chargés.</p>}
         </>}
       </CardContent>
+      <Dialog open={!!detailAssignment} onOpenChange={open => { if (!open) { setDetailAssignment(null); setDetailProperty(null); } }}>
+        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Détail Cadence du logement</DialogTitle>
+            <DialogDescription>Seul un administrateur peut modifier l’ordre des photos depuis cet espace.</DialogDescription>
+          </DialogHeader>
+          {detailLoading && <p className="text-sm text-muted-foreground">Chargement du logement Cadence…</p>}
+          {detailProperty && (
+            <ChannelPropertySummary
+              property={detailProperty}
+              photoOrder={photoOrders.get(channelPropertyScopeKey(detailProperty))}
+              allowPhotoReorder
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,6 @@ import {
   assignChannelProperty, ChannelApiError, ChannelAssignment, ChannelProperty, channelPropertyName,
   getChannelAssignments, getChannelCatalog, getChannelPropertyDetail, linkChannelAssignmentRoom, unassignChannelProperty,
 } from "@/lib/owner-channel-api";
-import { channelPropertyScopeKey, getChannelPhotoOrders } from "@/lib/channel-photo-order-api";
 import ChannelPropertySummary from "@/components/ChannelPropertySummary";
 
 export default function ChannelPropertyAssignments({ clientProfileId }: { clientProfileId: string }) {
@@ -30,12 +28,6 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
   const [detailAssignment, setDetailAssignment] = useState<ChannelAssignment | null>(null);
   const [detailProperty, setDetailProperty] = useState<ChannelProperty | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const { data: photoOrders = new Map<string, string[]>() } = useQuery({
-    queryKey: ["channel-photo-orders", "admin"],
-    queryFn: getChannelPhotoOrders,
-    staleTime: 30 * 1000,
-    retry: false,
-  });
 
   useEffect(() => {
     let active = true;
@@ -105,7 +97,7 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
       if (!property || detail.agency_id !== assignment.agency_id || detail.environment !== assignment.environment) {
         throw new Error("Le logement Cadence ne correspond plus à cette attribution.");
       }
-      setDetailProperty({ ...property, agency_id: detail.agency_id, environment: detail.environment });
+      setDetailProperty({ ...property, agency_id: detail.agency_id, environment: detail.environment, assignment_id: assignment.id });
     } catch (error) {
       fail(error);
     } finally {
@@ -186,7 +178,6 @@ export default function ChannelPropertyAssignments({ clientProfileId }: { client
           {detailProperty && (
             <ChannelPropertySummary
               property={detailProperty}
-              photoOrder={photoOrders.get(channelPropertyScopeKey(detailProperty))}
               allowPhotoReorder
             />
           )}

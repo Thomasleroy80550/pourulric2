@@ -4,7 +4,6 @@ import { AlertCircle, ArrowDown, ArrowUp, Check, ImageOff, Loader2 } from "lucid
 import { toast } from "sonner";
 import type { ChannelProperty, ChannelPropertyPhoto } from "@/lib/owner-channel-api";
 import {
-  applyChannelPhotoOrder,
   channelPhotoKey,
   channelPropertyDescription,
   channelPropertyEquipments,
@@ -19,7 +18,6 @@ import { Button } from "@/components/ui/button";
 interface ChannelPropertySummaryProps {
   property?: ChannelProperty;
   compact?: boolean;
-  photoOrder?: string[];
   allowPhotoReorder?: boolean;
 }
 
@@ -27,20 +25,21 @@ function sameOrder(a: ChannelPropertyPhoto[], b: ChannelPropertyPhoto[]) {
   return a.length === b.length && a.every((photo, index) => channelPhotoKey(photo) === channelPhotoKey(b[index]));
 }
 
-export default function ChannelPropertySummary({ property, compact = false, photoOrder, allowPhotoReorder = false }: ChannelPropertySummaryProps) {
+export default function ChannelPropertySummary({ property, compact = false, allowPhotoReorder = false }: ChannelPropertySummaryProps) {
   const queryClient = useQueryClient();
+  const basePhotos = useMemo(() => property ? channelPropertyPhotos(property) : [], [property]);
+  const [currentPhotos, setCurrentPhotos] = useState<ChannelPropertyPhoto[]>(basePhotos);
   const [draftPhotos, setDraftPhotos] = useState<ChannelPropertyPhoto[] | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
 
-  const basePhotos = useMemo(() => property ? channelPropertyPhotos(property) : [], [property]);
-  const savedPhotos = useMemo(() => applyChannelPhotoOrder(basePhotos, photoOrder), [basePhotos, photoOrder]);
-  const photos = draftPhotos ?? savedPhotos;
+  const photos = draftPhotos ?? currentPhotos;
   const equipments = useMemo(() => property ? channelPropertyEquipments(property) : [], [property]);
-  const orderChanged = draftPhotos !== null && !sameOrder(draftPhotos, savedPhotos);
+  const orderChanged = draftPhotos !== null && !sameOrder(draftPhotos, currentPhotos);
 
   useEffect(() => {
+    setCurrentPhotos(basePhotos);
     setDraftPhotos(null);
-  }, [property?.id, photoOrder]);
+  }, [basePhotos, property?.id]);
 
   if (!property) {
     return (
@@ -66,11 +65,13 @@ export default function ChannelPropertySummary({ property, compact = false, phot
     if (!draftPhotos || !orderChanged) return;
     setSavingOrder(true);
     try {
-      const order = draftPhotos.map(channelPhotoKey);
-      await saveChannelPhotoOrder(property, order);
-      await queryClient.invalidateQueries({ queryKey: ["channel-photo-orders"] });
+      const result = await saveChannelPhotoOrder(property, draftPhotos.map(photo => photo.url));
+      const byUrl = new Map(draftPhotos.map(photo => [photo.url, photo]));
+      const applied = result.images.map(url => byUrl.get(url)).filter((photo): photo is ChannelPropertyPhoto => Boolean(photo));
+      setCurrentPhotos(applied);
       setDraftPhotos(null);
-      toast.success("Ordre des photos enregistré dans l’espace propriétaire.");
+      await queryClient.invalidateQueries({ queryKey: ["myChannelProperties"] });
+      toast.success("Ordre des photos appliqué dans Cadence et propagé aux canaux.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Impossible d’enregistrer l’ordre des photos.");
     } finally {

@@ -34,10 +34,9 @@ const sections: { id: Section; label: string; icon: React.ElementType }[] = [
 interface RoomManagementDialogProps {
   room: UserRoom;
   channelProperty?: ChannelProperty;
-  channelPhotoOrder?: string[];
 }
 
-export function RoomManagementDialog({ room, channelProperty, channelPhotoOrder }: RoomManagementDialogProps) {
+export function RoomManagementDialog({ room, channelProperty }: RoomManagementDialogProps) {
   const [activeSection, setActiveSection] = useState<Section>('general');
   const { profile } = useSession();
 
@@ -72,7 +71,7 @@ export function RoomManagementDialog({ room, channelProperty, channelPhotoOrder 
           <div className="w-3/4 p-6 overflow-y-auto">
             {activeSection === 'general' && (
               <div className="space-y-6">
-                <ChannelPropertySummary property={channelProperty} photoOrder={channelPhotoOrder} allowPhotoReorder={profile?.role === 'admin' && Boolean(channelProperty)} />
+                <ChannelPropertySummary property={channelProperty} allowPhotoReorder={profile?.role === 'admin' && Boolean(channelProperty)} />
                 <RoomGeneralInfoForm room={room} />
               </div>
             )}

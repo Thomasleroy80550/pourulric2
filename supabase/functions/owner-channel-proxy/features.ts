@@ -138,6 +138,44 @@ async function callCadence(
   return payload;
 }
 
+function validateImageList(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 100) {
+    throw new ChannelFeatureError(400, "images : liste ordonnée complète des URL des photos actuelles (1 à 100, sans doublon)");
+  }
+  const images = value.map(item => {
+    if (typeof item !== "string" || !/^https?:\/\//i.test(item) || item.length > 4096) {
+      throw new ChannelFeatureError(400, "images : liste ordonnée complète des URL des photos actuelles (1 à 100, sans doublon)");
+    }
+    return item;
+  });
+  if (new Set(images).size !== images.length) {
+    throw new ChannelFeatureError(400, "images : liste ordonnée complète des URL des photos actuelles (1 à 100, sans doublon)");
+  }
+  return images;
+}
+
+async function currentPropertyImages(assignment: Assignment): Promise<string[]> {
+  const payload = await callCadence("owner-site-properties", { params: { property_id: assignment.property_id } });
+  if (payload.agency_id !== assignment.agency_id || payload.environment !== assignment.environment || !Array.isArray(payload.properties)) {
+    throw new ChannelFeatureError(409, "L’environnement ou l’agence du logement ne correspond plus à l’attribution.");
+  }
+  const property = payload.properties.find((item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    const id = (item as Record<string, unknown>).id;
+    return typeof id === "string" && id.toLowerCase() === assignment.property_id.toLowerCase();
+  }) as Record<string, unknown> | undefined;
+  if (!property) throw new ChannelFeatureError(404, "Logement absent ou supprimé.");
+  try {
+    return validateImageList(property.images);
+  } catch {
+    throw new ChannelFeatureError(409, "Ce logement n’a aucune photo à réorganiser");
+  }
+}
+
+function samePhotoSet(current: string[], requested: string[]) {
+  return current.length === requested.length && new Set(current).size === current.length && current.every(url => requested.includes(url));
+}
+
 function validateCalendar(payload: Record<string, unknown>, assignment: Assignment) {
   if (payload.version !== "1" || !sameIdentity(payload, assignment, true) ||
       !validDate(payload.from) || !validDate(payload.to) || payload.from >= payload.to ||
@@ -304,6 +342,28 @@ export async function handleChannelFeatures(
   userId: string,
   isAdmin: boolean,
 ) {
+  if (body.action === "photo_reorder") {
+    if (!isAdmin) throw new ChannelFeatureError(403, "La réorganisation des photos est réservée aux administrateurs.");
+    const assignment = await assignmentForRead(db, body.assignment_id, userId, isAdmin);
+    const requestedImages = validateImageList(body.images);
+    const currentImages = await currentPropertyImages(assignment);
+    if (!samePhotoSet(currentImages, requestedImages)) {
+      throw new ChannelFeatureError(409, "La liste ne reprend pas exactement les photos actuelles du logement : relisez les logements avant de réordonner");
+    }
+    const payload = await callCadence("owner-site-photos", {
+      method: "POST",
+      body: { property_id: assignment.property_id, images: requestedImages },
+    });
+    const returnedImages = validateImageList(payload.images);
+    if (payload.property_id !== assignment.property_id ||
+        typeof payload.photos_updated !== "number" || !Number.isInteger(payload.photos_updated) || payload.photos_updated < 0 ||
+        returnedImages.some((url, index) => url !== requestedImages[index])) {
+      throw new ChannelFeatureError(502, "Réponse de réorganisation des photos non conforme au contrat API.");
+    }
+    console.info("[owner-channel-proxy] photos reordered", { propertyId: assignment.property_id, count: payload.photos_updated });
+    return { property_id: assignment.property_id, images: returnedImages, photos_updated: payload.photos_updated };
+  }
+
   if (body.action === "calendar") {
     const assignment = await assignmentForRead(db, body.assignment_id, userId, isAdmin);
     const from = optionalDate(body, "from");

@@ -15,8 +15,7 @@ import {
   getMonthlyFeaturedRooms,
 } from '@/lib/user-room-api';
 import { getMyChannelProperties, type ChannelProperty } from '@/lib/owner-channel-api';
-import { applyChannelPhotoOrder, channelPropertyPhotos, channelPropertyTitle } from '@/lib/channel-property-display';
-import { channelPropertyScopeKey, getChannelPhotoOrders } from '@/lib/channel-photo-order-api';
+import { channelPropertyPhotos, channelPropertyTitle } from '@/lib/channel-property-display';
 
 async function getAllMyChannelProperties(): Promise<ChannelProperty[]> {
   const properties: ChannelProperty[] = [];
@@ -40,13 +39,6 @@ const MyRoomsPage = () => {
     queryFn: getAllMyChannelProperties,
     enabled: Boolean(profile?.id && profile.role === 'user'),
     staleTime: 60 * 1000,
-    retry: false,
-  });
-  const { data: channelPhotoOrders = new Map<string, string[]>() } = useQuery({
-    queryKey: ['channel-photo-orders', profile?.id],
-    queryFn: getChannelPhotoOrders,
-    enabled: Boolean(profile?.id && profile.role === 'user' && channelProperties.length),
-    staleTime: 30 * 1000,
     retry: false,
   });
   const currentMonth = getCurrentMonthInputValue();
@@ -107,8 +99,7 @@ const MyRoomsPage = () => {
             {rooms.map((room) => {
               const featuredRoom = featuredRoomById.get(room.id);
               const channelProperty = channelPropertyByRoomId.get(room.id);
-              const photoOrder = channelProperty ? channelPhotoOrders.get(channelPropertyScopeKey(channelProperty)) : undefined;
-              const photo = channelProperty ? applyChannelPhotoOrder(channelPropertyPhotos(channelProperty), photoOrder)[0] : undefined;
+              const photo = channelProperty ? channelPropertyPhotos(channelProperty)[0] : undefined;
               const displayName = channelProperty ? channelPropertyTitle(channelProperty) : room.room_name;
               return (
                 <Card key={room.id} className="flex flex-col overflow-hidden">
@@ -155,7 +146,7 @@ const MyRoomsPage = () => {
                     )}
                   </CardContent>
                   <CardFooter className="gap-2">
-                    <RoomManagementDialog room={room} channelProperty={channelProperty} channelPhotoOrder={photoOrder} />
+                    <RoomManagementDialog room={room} channelProperty={channelProperty} />
                   </CardFooter>
                 </Card>
               );

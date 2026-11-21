@@ -18,12 +18,12 @@ function photoUrl(item: string | ChannelPropertyPhoto | Record<string, unknown>)
   if (typeof item === "string") return item;
   const record = item as Record<string, unknown>;
   const direct = [record.url, record.photo_url, record.image_url, record.src, record.original_url]
-    .find(value => typeof value === "string" && value.startsWith("https://"));
+    .find(value => typeof value === "string" && /^https?:\/\//i.test(value));
   if (typeof direct === "string") return direct;
   const nestedSources = [record.url, record.image, record.urls];
   for (const source of nestedSources) {
     if (!source || typeof source !== "object" || Array.isArray(source)) continue;
-    const nested = Object.values(source as Record<string, unknown>).find(value => typeof value === "string" && value.startsWith("https://"));
+    const nested = Object.values(source as Record<string, unknown>).find(value => typeof value === "string" && /^https?:\/\//i.test(value));
     if (typeof nested === "string") return nested;
   }
   return undefined;
@@ -40,7 +40,7 @@ function photoId(item: string | ChannelPropertyPhoto | Record<string, unknown>, 
 function photoPosition(item: string | ChannelPropertyPhoto | Record<string, unknown>): number | undefined {
   if (typeof item === "string") return undefined;
   const record = item as Record<string, unknown>;
-  const value = [record.position, record.order, record.sort_order, record.rank]
+  const value = [record.position, record.displayPriority, record.display_priority, record.order, record.sort_order, record.rank]
     .find(itemValue => typeof itemValue === "number" && Number.isFinite(itemValue));
   return typeof value === "number" ? value : undefined;
 }
@@ -69,15 +69,6 @@ export function channelPropertyPhotos(property: ChannelProperty): ChannelPropert
 
 export function channelPhotoKey(photo: ChannelPropertyPhoto): string {
   return photo.id || photo.url;
-}
-
-export function applyChannelPhotoOrder(photos: ChannelPropertyPhoto[], savedOrder: string[] | null | undefined): ChannelPropertyPhoto[] {
-  if (!savedOrder?.length) return photos;
-  const rank = new Map(savedOrder.map((key, index) => [key, index]));
-  return photos
-    .map((photo, index) => ({ photo, index, order: rank.get(channelPhotoKey(photo)) ?? rank.get(photo.url) }))
-    .sort((a, b) => (a.order ?? savedOrder.length + a.index) - (b.order ?? savedOrder.length + b.index))
-    .map(item => item.photo);
 }
 
 function humanizeEquipmentLabel(value: string): string {

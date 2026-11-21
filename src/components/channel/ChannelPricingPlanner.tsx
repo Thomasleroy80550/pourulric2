@@ -185,6 +185,32 @@ function normalizeDrafts(periods: DraftPeriod[]) {
   return { rows: sorted };
 }
 
+function shiftDate(date: string, days: number) {
+  return format(addDays(parseISO(date), days), "yyyy-MM-dd");
+}
+
+function splitOutsideManagerPeriods(rows: ChannelPricingPeriodInput[], managerPeriods: ChannelPricingReadPeriod[]) {
+  const sortedManagers = [...managerPeriods].sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
+  const result: ChannelPricingPeriodInput[] = [];
+  for (const row of rows) {
+    let segments: ChannelPricingPeriodInput[] = [{ ...row }];
+    for (const manager of sortedManagers) {
+      const next: ChannelPricingPeriodInput[] = [];
+      for (const segment of segments) {
+        if (manager.end_date < segment.start_date || manager.start_date > segment.end_date) {
+          next.push(segment);
+          continue;
+        }
+        if (segment.start_date < manager.start_date) next.push({ ...segment, end_date: shiftDate(manager.start_date, -1) });
+        if (segment.end_date > manager.end_date) next.push({ ...segment, start_date: shiftDate(manager.end_date, 1) });
+      }
+      segments = next;
+    }
+    result.push(...segments);
+  }
+  return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
+}
+
 function formatPrice(price: number | null, currency: string) {
   if (price === null || !Number.isFinite(price)) return "—";
   try {
@@ -395,6 +421,13 @@ export default function ChannelPricingPlanner() {
     const assignmentChanged = selectedAssignmentId !== source.id;
     if (assignmentChanged) selectAssignment(source.id);
     setFormOpen(true);
+    const managerPeriod = plan.pricing.periods.find(period =>
+      period.source === "cadence" && period.start_date <= dateIso && period.end_date >= dateIso
+    );
+    if (managerPeriod) {
+      setFormError(`Le ${dateIso} est déjà géré par votre conciergerie (${managerPeriod.start_date} → ${managerPeriod.end_date}). Choisissez une date hors période gestionnaire.`);
+      return;
+    }
     setFormError("");
     if (assignmentChanged || !selectionStart || selectionEnd) {
       setSelectionStart(dateIso);
@@ -439,7 +472,19 @@ export default function ChannelPricingPlanner() {
     candidateDrafts = [...candidateDrafts].sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
     const normalizedCandidate = normalizeDrafts(candidateDrafts);
     if ("error" in normalizedCandidate) return { error: normalizedCandidate.error };
-    return { candidateDrafts, rows: normalizedCandidate.rows };
+    const managerPeriods = selectedPricing?.periods.filter(period => period.source === "cadence") ?? [];
+    const rows = splitOutsideManagerPeriods(normalizedCandidate.rows, managerPeriods);
+    if (normalizedCandidate.rows.length > 0 && rows.length === 0) {
+      const managerPeriod = managerPeriods.find(period =>
+        normalizedCandidate.rows.some(row => row.start_date <= period.end_date && row.end_date >= period.start_date)
+      );
+      return {
+        error: managerPeriod
+          ? `Ces dates sont déjà gérées par votre conciergerie (${managerPeriod.start_date} → ${managerPeriod.end_date}). Choisissez des dates hors période gestionnaire.`
+          : "Ces dates sont déjà gérées par votre conciergerie.",
+      };
+    }
+    return { candidateDrafts, rows };
   };
 
   const applyEditor = () => {
@@ -503,6 +548,12 @@ export default function ChannelPricingPlanner() {
     }
     console.info("[ChannelPricingPlanner] Envoi des prix à Cadence", {
       periods: candidate.rows.length,
+      rows: candidate.rows.map(row => ({
+        start_date: row.start_date,
+        end_date: row.end_date,
+        price: row.price,
+        min_stay: row.min_stay,
+      })),
       emptyReplaceConfirmed: allowEmptyReplace,
     });
     setSaving(true);

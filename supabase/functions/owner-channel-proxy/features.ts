@@ -480,7 +480,18 @@ export async function handleChannelFeatures(
   if (body.action === "pricing_read") {
     const assignment = await assignmentForRead(db, body.assignment_id, userId, isAdmin);
     const payload = await callCadence("owner-site-pricing", { params: { property_id: assignment.property_id } });
-    return validatePricingRead(payload, assignment);
+    const result = validatePricingRead(payload, assignment);
+    console.info("[owner-channel-proxy] owner pricing read", {
+      propertyId: assignment.property_id,
+      periods: result.periods.map(period => ({
+        source: period.source,
+        start_date: period.start_date,
+        end_date: period.end_date,
+        price: period.price,
+        min_stay: period.min_stay,
+      })),
+    });
+    return result;
   }
 
   if (body.action === "pricing_replace") {
@@ -489,13 +500,50 @@ export async function handleChannelFeatures(
     const existing = validatePricingRead(await callCadence("owner-site-pricing", { params: { property_id: assignment.property_id } }), assignment);
     if (existing.beyond_linked) throw new ChannelFeatureError(409, "Ce logement est lié à Beyond : ses prix et restrictions viennent de Beyond");
     const periods = validatePricingPeriods(body.periods);
-    console.info("[owner-channel-proxy] owner pricing submit", { propertyId: assignment.property_id, count: periods.length });
+    console.info("[owner-channel-proxy] owner pricing submit", {
+      propertyId: assignment.property_id,
+      count: periods.length,
+      periods: periods.map(period => ({
+        start_date: period.start_date,
+        end_date: period.end_date,
+        price: period.price,
+        min_stay: period.min_stay,
+      })),
+      existing: existing.periods.map(period => ({
+        source: period.source,
+        start_date: period.start_date,
+        end_date: period.end_date,
+      })),
+    });
+    const coveringManager = existing.periods.find(period =>
+      period.source === "cadence" && periods.length > 0 &&
+      periods.every(row => period.start_date <= row.start_date && period.end_date >= row.end_date)
+    );
+    if (coveringManager) {
+      throw new ChannelFeatureError(409, `Ces dates sont déjà gérées par votre conciergerie (${coveringManager.start_date} → ${coveringManager.end_date}). Choisissez des dates hors période gestionnaire.`);
+    }
     const payload = await callCadence("owner-site-pricing", {
       method: "POST",
       body: { property_id: assignment.property_id, periods },
     });
     const result = validatePricingResponse(payload, assignment);
-    console.info("[owner-channel-proxy] owner pricing replaced", { propertyId: assignment.property_id, count: result.periods_applied });
+    console.info("[owner-channel-proxy] owner pricing replaced", {
+      propertyId: assignment.property_id,
+      count: result.periods_applied,
+      returnedPeriods: result.periods.length,
+      pushedToNextPax: result.pushed_to_nextpax,
+    });
+    if (periods.length > 0 && result.periods_applied === 0) {
+      const overlappingManager = existing.periods.find(period =>
+        period.source === "cadence" && periods.some(row => row.start_date <= period.end_date && row.end_date >= period.start_date)
+      );
+      throw new ChannelFeatureError(
+        409,
+        overlappingManager
+          ? `Cadence n’a appliqué aucune période propriétaire : ces dates chevauchent une période gestionnaire (${overlappingManager.start_date} → ${overlappingManager.end_date}).`
+          : "Cadence a reçu la période mais n’en a appliqué aucune.",
+      );
+    }
     return result;
   }
 

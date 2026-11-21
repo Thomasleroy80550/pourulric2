@@ -268,12 +268,15 @@ const CalendarPage: React.FC = () => {
   };
 
   const handlePriceRestrictionClick = () => {
-
-    if (profile?.can_manage_prices) {
-      setIsPriceRestrictionDialogOpen(true);
-    } else {
+    if (!profile?.can_manage_prices) {
       setIsAccessDeniedDialogOpen(true);
+      return;
     }
+    if (hasChannelRooms) {
+      navigate('/prix-cadence');
+      return;
+    }
+    setIsPriceRestrictionDialogOpen(true);
   };
 
   const handlePriceRestrictionSaved = () => {
@@ -422,8 +425,6 @@ const CalendarPage: React.FC = () => {
           onOpenChange={setIsPriceRestrictionDialogOpen}
           userRooms={userRooms}
           onSettingsSaved={handlePriceRestrictionSaved}
-          useChannelCalendar={hasChannelRooms}
-          channelSources={channelFeed.sources}
         />
         <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
           <AlertDialogContent>
@@ -603,8 +604,6 @@ const CalendarPage: React.FC = () => {
         onOpenChange={setIsPriceRestrictionDialogOpen}
         userRooms={userRooms}
         onSettingsSaved={handlePriceRestrictionSaved}
-        useChannelCalendar={hasChannelRooms}
-        channelSources={channelFeed.sources}
       />
       <AlertDialog open={isFeatureUnavailableDialogOpen} onOpenChange={setIsFeatureUnavailableDialogOpen}>
         <AlertDialogContent>

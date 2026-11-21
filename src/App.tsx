@@ -149,6 +149,7 @@ import MobileV4Redirect from "@/components/MobileV4Redirect";
 import PwaUpdatePrompt from "@/components/PwaUpdatePrompt";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 import PlanningV2Page from "./pages/PlanningV2Page";
+import ChannelPricingPage from "./pages/ChannelPricingPage";
 import LmnpPage from "./pages/LmnpPage";
 import GuestReportPage from "./pages/GuestReportPage";
 import GuestReportStatusPage from "./pages/GuestReportStatusPage";
@@ -367,6 +368,7 @@ function App() {
                       <Route path="/calendar" element={<CalendarPage />} />
                       <Route path="/planning-v3" element={<PlanningV3Page />} />
                       <Route path="/planning-v2" element={<PlanningV2Page />} />
+                      <Route path="/prix-cadence" element={<ChannelPricingPage />} />
                       <Route path="/admin/channel-reservations" element={<ChannelReservationsPage />} />
                       <Route path="/admin/cadence" element={<OwnerChannelPage />} />
                                           <Route path="/calendar-mobile" element={<CalendarPageMobile />} />

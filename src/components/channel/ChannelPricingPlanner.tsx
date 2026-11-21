@@ -634,7 +634,7 @@ export default function ChannelPricingPlanner() {
           {editor?.price && Number.isFinite(Number(editor.price)) && Number(editor.price) >= 0 && (
             <div className="rounded-lg border bg-muted/10 p-3">
               <p className="mb-2 text-sm font-medium">Prix estimés sur les OTA</p>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2">
                 {OTA_MARKUPS.map(channel => (
                   <div key={channel.name} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm" style={{ borderColor: channel.color, backgroundColor: `${channel.color}1A` }}>
                     <span className="font-medium" style={{ color: channel.color }}>{channel.name} +{Math.round((channel.multiplier - 1) * 100)}%</span>
@@ -663,7 +663,7 @@ export default function ChannelPricingPlanner() {
                       <span className="font-medium">{draft.label || "Période"}</span>
                       <span className="ml-2 text-muted-foreground">{draft.start_date} → {draft.end_date}</span>
                       <span className="ml-2 font-semibold text-emerald-600">{formatPrice(draft.price ? Number(draft.price) : null, selectedCurrency)}</span>
-                      {draft.price && otaPriceRange(Number(draft.price), selectedCurrency) && <span className="ml-2 text-muted-foreground">OTA {otaPriceRange(Number(draft.price), selectedCurrency)}</span>}
+                      {draft.price && otaPriceRange(Number(draft.price), selectedCurrency) && <span className="block text-muted-foreground">OTA {otaPriceRange(Number(draft.price), selectedCurrency)}</span>}
                     </button>
                     <button type="button" onClick={() => removeDraft(selectedAssignmentId, draft.key)} disabled={selectedPricing?.beyond_linked || saving} aria-label="Supprimer cette période" className="rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40">
                       <X className="h-3.5 w-3.5" />
@@ -678,8 +678,9 @@ export default function ChannelPricingPlanner() {
                 <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Prix gérés pour vous</p>
                 <div className="flex flex-wrap gap-2">
                   {cadencePeriods.map(period => (
-                    <span key={period.id} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                      {period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)} · OTA {otaPriceRange(period.price, selectedCurrency)}
+                    <span key={period.id} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                      <span>{period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)}</span>
+                      <span className="block">OTA {otaPriceRange(period.price, selectedCurrency)}</span>
                     </span>
                   ))}
                   {beyondPeriods.length > 0 && (
@@ -734,7 +735,12 @@ export default function ChannelPricingPlanner() {
               )}
               <div className="space-y-1 text-xs text-muted-foreground">
                 {selectedApplied.periods.length
-                  ? selectedApplied.periods.map(period => <p key={period.id}>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)} · {period.min_stay} nuit(s) min. · OTA {otaPriceRange(period.price, selectedCurrency)}</p>)
+                  ? selectedApplied.periods.map(period => (
+                    <div key={period.id}>
+                      <p>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)} · {period.min_stay} nuit(s) min.</p>
+                      <p className="text-[11px]">OTA {otaPriceRange(period.price, selectedCurrency)}</p>
+                    </div>
+                  ))
                   : <p>Aucune plage n’a été appliquée par Cadence.</p>}
               </div>
             </div>

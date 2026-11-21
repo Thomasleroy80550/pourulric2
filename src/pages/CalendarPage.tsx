@@ -3,12 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import BookingPlanningGrid from '@/components/BookingPlanningGrid';
-import BookingPlanningGridMobile from '@/components/BookingPlanningGridMobile';
-import BookingListMobile from '@/components/BookingListMobile';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, DollarSign, RefreshCw, Sparkles } from 'lucide-react';
+import { PlusCircle, DollarSign, RefreshCw } from 'lucide-react';
 import OwnerReservationDialog from '@/components/OwnerReservationDialog';
 import PriceRestrictionDialog from '@/components/PriceRestrictionDialog';
 import { getUserRooms, UserRoom } from '@/lib/user-room-api';
@@ -31,8 +28,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import EcowattForecastBox from "@/components/EcowattForecastBox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useOwnerReservationFeed } from '@/hooks/use-owner-reservation-feed';
+import PlanningGanttV2 from '@/components/planning-v2/PlanningGanttV2';
+import ChannelPricingPlanner from '@/components/channel/ChannelPricingPlanner';
 
 const COOLDOWN_KEY = 'calendar_refresh_cooldown';
 const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
@@ -40,7 +38,6 @@ const COOLDOWN_DURATION = 50 * 60 * 1000; // 50 minutes in milliseconds
 const CalendarPage: React.FC = () => {
   const { profile, session } = useSession();
   const isMobile = useIsMobile();
-  const navigate = useNavigate();
   const [isOwnerReservationDialogOpen, setIsOwnerReservationDialogOpen] = useState(false);
   const [isPriceRestrictionDialogOpen, setIsPriceRestrictionDialogOpen] = useState(false);
   const [isAccessDeniedDialogOpen, setIsAccessDeniedDialogOpen] = useState(false);
@@ -65,8 +62,7 @@ const CalendarPage: React.FC = () => {
     return savedTime ? parseInt(savedTime, 10) : 0;
   });
   const [remainingTime, setRemainingTime] = useState<string>('');
-  const [monthlyDesignV2, setMonthlyDesignV2] = useState(false);
-  const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'ical'>('planning');
+  const [activeTab, setActiveTab] = useState<'planning' | 'twelve' | 'debug' | 'ical' | 'pricing'>('planning');
 
   console.log("CalendarPage - profile from useSession:", profile); // <-- Added this line
 
@@ -273,7 +269,7 @@ const CalendarPage: React.FC = () => {
       return;
     }
     if (hasChannelRooms) {
-      navigate('/channel/pricing');
+      setActiveTab('pricing');
       return;
     }
     setIsPriceRestrictionDialogOpen(true);
@@ -347,13 +343,6 @@ const CalendarPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
             <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button
-                  onClick={() => navigate('/planning-v2')}
-                  className="flex items-center w-full sm:w-auto text-sm sm:text-base bg-gradient-to-r from-[hsl(var(--sidebar-foreground))] to-[hsl(var(--accent))] text-white hover:opacity-90"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Nouveau planning
-                </Button>
                 <Button onClick={handleOwnerReservationClick} className="flex items-center w-full sm:w-auto text-sm sm:text-base">
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Réservation Propriétaire
@@ -376,40 +365,44 @@ const CalendarPage: React.FC = () => {
             </div>
           </div>
           
-          {/* Vue liste mobile directe avec contraintes de largeur */}
-          <div className="w-full max-w-full space-y-4 overflow-x-hidden">
-            <BookingListMobile
-              reservations={reservations.map(r => ({
-                id: r.id,
-                room_id: r.krossbooking_room_id || r.property_name,
-                room_name: r.property_name,
-                start_date: r.check_in_date,
-                end_date: r.check_out_date,
-                guest_name: r.guest_name,
-                status: r.status,
-                platform: r.channel_identifier || 'Unknown',
-                total_amount: parseFloat(r.amount) || 0
-              }))}
-              isLoading={loadingData}
-            />
-            <BookingListMobile
-              title="Réservations iCal à venir"
-              emptyMessage="Aucune réservation iCal à venir"
-              showAmount={false}
-              isLoading={loadingIcalData}
-              reservations={icalReservations.map(r => ({
-                id: r.id,
-                room_id: r.krossbooking_room_id || r.property_name,
-                room_name: r.property_name,
-                start_date: r.check_in_date,
-                end_date: r.check_out_date,
-                guest_name: r.guest_name,
-                status: r.status,
-                platform: 'iCal',
-                total_amount: 0,
-              }))}
-            />
-          </div>
+          <Tabs value={activeTab === 'pricing' ? 'pricing' : 'planning'} onValueChange={(value) => setActiveTab(value as 'planning' | 'pricing')} className="w-full">
+            <TabsList className="mb-4 grid w-full grid-cols-2">
+              <TabsTrigger value="planning">Planning</TabsTrigger>
+              <TabsTrigger value="pricing">Prix & restrictions</TabsTrigger>
+            </TabsList>
+            <TabsContent value="planning">
+              {loadingData || loadingIcalData ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-[420px] w-full" />
+                </div>
+              ) : userRooms.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Aucune chambre configurée. Ajoutez vos logements depuis votre profil.</p>
+              ) : (
+                <div className="w-full max-w-full overflow-x-hidden">
+                  <PlanningGanttV2
+                    userRooms={userRooms}
+                    reservations={[...reservations, ...icalReservations]}
+                    onCreateOwnerReservation={handleOwnerReservationClick}
+                  />
+                </div>
+              )}
+            </TabsContent>
+            <TabsContent value="pricing">
+              {!profile?.can_manage_prices ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Accès non autorisé</AlertTitle>
+                  <AlertDescription>Vous n’avez pas la permission de gérer les prix. Contactez un administrateur pour activer cet accès.</AlertDescription>
+                </Alert>
+              ) : !hasChannelRooms ? (
+                <Alert>
+                  <AlertDescription>Aucun logement Cadence n’est attribué à ce compte.</AlertDescription>
+                </Alert>
+              ) : (
+                <ChannelPricingPlanner />
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
 
         <OwnerReservationDialog
@@ -474,14 +467,6 @@ const CalendarPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold">Calendrier</h1>
           <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => navigate('/planning-v2')}
-              className="flex items-center bg-gradient-to-r from-[hsl(var(--sidebar-foreground))] to-[hsl(var(--accent))] text-white hover:opacity-90"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Nouveau planning
-              <span className="ml-2 inline-block h-2 w-2 rounded-full bg-white animate-pulse" />
-            </Button>
             <Button onClick={handleOwnerReservationClick} className="flex items-center">
               <PlusCircle className="h-4 w-4 mr-2" />
               Réservation Propriétaire
@@ -509,9 +494,10 @@ const CalendarPage: React.FC = () => {
             <CardTitle className="text-lg font-semibold">Calendrier</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug' | 'ical')} className="w-full">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'planning' | 'twelve' | 'debug' | 'ical' | 'pricing')} className="w-full">
               <TabsList className="mb-4 flex flex-wrap h-auto">
                 <TabsTrigger value="planning">Planning des Réservations</TabsTrigger>
+                <TabsTrigger value="pricing">Prix & restrictions</TabsTrigger>
                 <TabsTrigger value="ical">iCal</TabsTrigger>
                 <TabsTrigger value="twelve">Vue 12 mois</TabsTrigger>
                 <TabsTrigger value="debug">Vue debug</TabsTrigger>
@@ -529,15 +515,27 @@ const CalendarPage: React.FC = () => {
                   </p>
                 ) : (
                   <div className="w-full min-w-0 overflow-x-visible">
-                    <BookingPlanningGridStudio
-                      refreshTrigger={refreshTrigger}
+                    <PlanningGanttV2
                       userRooms={userRooms}
                       reservations={reservations}
-                      onReservationChange={handleReservationChange}
-                      profile={profile}
-                      replacedRoomIds={channelFeed.replacedRoomIds}
+                      onCreateOwnerReservation={handleOwnerReservationClick}
                     />
                   </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="pricing">
+                {!profile?.can_manage_prices ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Accès non autorisé</AlertTitle>
+                    <AlertDescription>Vous n’avez pas la permission de gérer les prix. Contactez un administrateur pour activer cet accès.</AlertDescription>
+                  </Alert>
+                ) : !hasChannelRooms ? (
+                  <Alert>
+                    <AlertDescription>Aucun logement Cadence n’est attribué à ce compte.</AlertDescription>
+                  </Alert>
+                ) : (
+                  <ChannelPricingPlanner />
                 )}
               </TabsContent>
 

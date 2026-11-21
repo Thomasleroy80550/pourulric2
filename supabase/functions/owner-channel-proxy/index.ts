@@ -65,7 +65,7 @@ serve(async (req) => {
     if (["reservation_sources", "reservation_cache", "reservation_sync_start", "reservation_sync_page"].includes(body.action)) {
       return json(await handleReservations(db, body, auth.user.id, isAdmin, upstream));
     }
-    if (["calendar", "blocks", "block_create", "cleaning_list", "cleaning_detail", "reviews_cache", "reviews_sync_start", "reviews_sync_page", "photo_reorder", "pricing_replace"].includes(body.action)) {
+    if (["calendar", "blocks", "block_create", "cleaning_list", "cleaning_detail", "reviews_cache", "reviews_sync_start", "reviews_sync_page", "photo_reorder", "pricing_read", "pricing_replace"].includes(body.action)) {
       return json(await handleChannelFeatures(db, body, auth.user.id, isAdmin));
     }
     if (body.action === "onboarding_context") return json(await loadOnboardingContext(db));

@@ -559,7 +559,7 @@ export default function ChannelPricingPlanner() {
             <Euro className="h-5 w-5 text-emerald-600 sm:h-6 sm:w-6" />
             Prix & restrictions
           </h2>
-          <p className="text-sm text-muted-foreground">Assignez un prix/nuit et un séjour minimum par période — l’envoi est fait à Cadence, qui transmet ensuite à NextPax.</p>
+          <p className="text-sm text-muted-foreground">Choisissez un logement, une période et un prix. Cadence applique les dates disponibles.</p>
         </div>
         <div className="flex items-center justify-between gap-2 sm:justify-end">
           <Button variant="outline" size="icon" onClick={() => setCurrentMonth(month => subMonths(month, 1))} aria-label="Mois précédent"><ChevronLeft className="h-4 w-4" /></Button>
@@ -582,8 +582,8 @@ export default function ChannelPricingPlanner() {
 
       <details open={formOpen} onToggle={event => setFormOpen(event.currentTarget.open)} className="group rounded-xl border bg-card shadow-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 font-medium">
-          <span>Assigner une période tarifaire</span>
-          <Badge variant="secondary">{selectedDrafts.length} période(s) propriétaire</Badge>
+          <span>Ajouter ou modifier un prix</span>
+          <Badge variant="secondary">{selectedDrafts.length} période(s)</Badge>
         </summary>
         <div className="space-y-4 border-t p-4">
           {selectedPricing?.beyond_linked && (
@@ -594,8 +594,8 @@ export default function ChannelPricingPlanner() {
           )}
           {formError && <Alert variant="destructive"><AlertDescription>{formError}</AlertDescription></Alert>}
 
-          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-7">
-            <div className="space-y-2 xl:col-span-2">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <div className="space-y-2 md:col-span-2 xl:col-span-2">
               <Label>Logement</Label>
               <Select value={selectedAssignmentId} onValueChange={selectAssignment} disabled={!sources.length || saving}>
                 <SelectTrigger><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
@@ -608,69 +608,80 @@ export default function ChannelPricingPlanner() {
             <div className="space-y-2"><Label>Fin</Label><Input type="date" value={editor?.end_date ?? ""} min={editor?.start_date || todayIso} onChange={event => setEditor(previous => previous ? { ...previous, end_date: event.target.value } : { ...newDraft(), start_date: event.target.value, end_date: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
             <div className="space-y-2"><Label>Prix / nuit ({selectedCurrency})</Label><Input type="number" min="0" max="100000" step="1" value={editor?.price ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, price: event.target.value } : { ...newDraft(), price: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
             <div className="space-y-2"><Label>Nuits min.</Label><Input type="number" min="1" max="365" step="1" value={editor?.min_stay ?? "1"} onChange={event => setEditor(previous => previous ? { ...previous, min_stay: event.target.value } : { ...newDraft(), min_stay: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
-            <div className="space-y-2"><Label>Nuits max.</Label><Input type="number" min={editor?.min_stay || "1"} step="1" value={editor?.max_stay ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, max_stay: event.target.value } : { ...newDraft(), max_stay: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} placeholder="Optionnel" /></div>
-            <div className="space-y-2 md:col-span-2 xl:col-span-3"><Label>Nom période</Label><Input maxLength={60} value={editor?.label ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, label: event.target.value } : { ...newDraft(), label: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} placeholder="Été 2027" /></div>
-            <div className="flex items-end gap-2 md:col-span-1 xl:col-span-4">
-              <Button type="button" onClick={applyEditor} disabled={!editor || !selectedPricing || selectedPricing.beyond_linked || saving}>{editingKey ? "Mettre à jour" : "Appliquer"}</Button>
+            <div className="flex items-end gap-2 md:col-span-2 xl:col-span-6">
+              <Button type="button" variant="outline" onClick={applyEditor} disabled={!editor || !selectedPricing || selectedPricing.beyond_linked || saving}>{editingKey ? "Mettre à jour la période" : "Ajouter à la liste"}</Button>
               {editor && <Button type="button" variant="outline" onClick={closeEditor} disabled={saving}>Annuler</Button>}
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              {ownerChips.map(draft => (
-                <div key={draft.key} className={cn("flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs shadow-sm dark:bg-gray-950", editingKey === draft.key && "border-emerald-500 ring-1 ring-emerald-500")}>
-                  <button type="button" onClick={() => editDraft(selectedAssignmentId, draft)} className="min-w-0 text-left" disabled={selectedPricing?.beyond_linked || saving}>
-                    <span className="font-medium">{draft.label || "Période propriétaire"}</span>
-                    <span className="ml-2 text-muted-foreground">{draft.start_date} → {draft.end_date}</span>
-                    <span className="ml-2 font-semibold text-emerald-600">{formatPrice(draft.price ? Number(draft.price) : null, selectedCurrency)}</span>
-                    <span className="ml-2 font-medium text-amber-600">{draft.min_stay || "1"} nuits min.</span>
-                  </button>
-                  <button type="button" onClick={() => removeDraft(selectedAssignmentId, draft.key)} disabled={selectedPricing?.beyond_linked || saving} aria-label="Supprimer cette période" className="rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-              {cadencePeriods.map(period => (
-                <span key={period.id} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                  {period.label || "Période gestionnaire"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)} · Géré par votre conciergerie
-                </span>
-              ))}
-              {beyondPeriods.length > 0 && (
-                <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-orange-900 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-100">
-                  Prix Beyond · {formatPrice(Math.min(...beyondPrices), selectedCurrency)}–{formatPrice(Math.max(...beyondPrices), selectedCurrency)} · {beyondPeriods.length} période(s)
-                </span>
-              )}
-              {!ownerChips.length && !cadencePeriods.length && !beyondPeriods.length && <p className="text-sm text-muted-foreground">Aucune période active pour ce logement.</p>}
+          <details className="rounded-lg border bg-muted/10 px-3 py-2">
+            <summary className="cursor-pointer text-sm text-muted-foreground">Options avancées</summary>
+            <div className="grid gap-3 pt-3 md:grid-cols-2">
+              <div className="space-y-2"><Label>Nuits max. (optionnel)</Label><Input type="number" min={editor?.min_stay || "1"} step="1" value={editor?.max_stay ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, max_stay: event.target.value } : { ...newDraft(), max_stay: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
+              <div className="space-y-2"><Label>Nom période (optionnel)</Label><Input maxLength={60} value={editor?.label ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, label: event.target.value } : { ...newDraft(), label: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} placeholder="Été 2027" /></div>
             </div>
-            <p className="text-xs text-muted-foreground">Les périodes saisies par votre conciergerie priment et peuvent découper les plages propriétaire.</p>
+          </details>
+
+          <div className="space-y-3">
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Vos prix</p>
+              <div className="flex flex-wrap gap-2">
+                {ownerChips.map(draft => (
+                  <div key={draft.key} className={cn("flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs shadow-sm dark:bg-gray-950", editingKey === draft.key && "border-emerald-500 ring-1 ring-emerald-500")}>
+                    <button type="button" onClick={() => editDraft(selectedAssignmentId, draft)} className="min-w-0 text-left" disabled={selectedPricing?.beyond_linked || saving}>
+                      <span className="font-medium">{draft.label || "Période"}</span>
+                      <span className="ml-2 text-muted-foreground">{draft.start_date} → {draft.end_date}</span>
+                      <span className="ml-2 font-semibold text-emerald-600">{formatPrice(draft.price ? Number(draft.price) : null, selectedCurrency)}</span>
+                    </button>
+                    <button type="button" onClick={() => removeDraft(selectedAssignmentId, draft.key)} disabled={selectedPricing?.beyond_linked || saving} aria-label="Supprimer cette période" className="rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {!ownerChips.length && <p className="text-sm text-muted-foreground">Aucun prix personnalisé.</p>}
+              </div>
+            </div>
+            {(cadencePeriods.length > 0 || beyondPeriods.length > 0) && (
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Prix gérés pour vous</p>
+                <div className="flex flex-wrap gap-2">
+                  {cadencePeriods.map(period => (
+                    <span key={period.id} className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                      {period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)}
+                    </span>
+                  ))}
+                  {beyondPeriods.length > 0 && (
+                    <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-orange-900 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-100">
+                      Beyond · {formatPrice(Math.min(...beyondPrices), selectedCurrency)}–{formatPrice(Math.max(...beyondPrices), selectedCurrency)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Si une date est déjà gérée par la conciergerie, elle est conservée telle quelle.</p>
           </div>
 
           {!selectedPricing?.beyond_linked && (
             <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
               <label className="flex items-start gap-3 text-sm">
                 <Checkbox checked={confirmed} onCheckedChange={value => setConfirmed(value === true)} disabled={saving || !selectedPricing} />
-                <span>Je confirme que ce planning remplace toutes mes périodes propriétaire existantes pour ce logement.</span>
+                <span>Je confirme l’enregistrement de ces prix.</span>
               </label>
-              {editor && (
-                <Alert>
-                  <AlertDescription>La période en cours de saisie sera appliquée automatiquement avant l’envoi.</AlertDescription>
-                </Alert>
-              )}
+              {editor && <p className="text-xs text-muted-foreground">La période en cours sera ajoutée automatiquement.</p>}
               {!selectedDrafts.length && !editor && (
                 <Alert variant="destructive">
                   <AlertDescription className="space-y-3">
-                    <p>La liste propriétaire est vide : aucun prix ne sera envoyé sauf si vous confirmez la suppression de vos périodes existantes.</p>
+                    <p>Aucune période n’est prête à être enregistrée.</p>
                     <label className="flex items-start gap-3 text-sm font-normal">
                       <Checkbox checked={allowEmptyReplace} onCheckedChange={value => setAllowEmptyReplace(value === true)} disabled={saving || !selectedPricing} />
-                      <span>Je veux supprimer toutes mes périodes propriétaire existantes pour ce logement.</span>
+                      <span>Supprimer mes prix personnalisés existants.</span>
                     </label>
                   </AlertDescription>
                 </Alert>
               )}
               <Button type="button" onClick={() => void submit()} disabled={saving || !confirmed || !selectedPricing}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {editor ? "Appliquer et envoyer à Cadence" : selectedDrafts.length ? "Envoyer à Cadence" : "Confirmer la suppression dans Cadence"}
+                {selectedDrafts.length || editor ? "Enregistrer" : "Supprimer mes prix"}
               </Button>
             </div>
           )}
@@ -678,9 +689,9 @@ export default function ChannelPricingPlanner() {
           {selectedApplied && (
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium">Périodes réellement appliquées</p>
+                <p className="text-sm font-medium">Résultat de l’enregistrement</p>
                 <Badge variant="secondary">
-                  {selectedApplied.periods_received} reçue(s) · {selectedApplied.periods_applied} appliquée(s) · {selectedApplied.periods_ignored} ignorée(s) · NextPax {selectedApplied.pushed_to_nextpax ? "OK" : "non poussé"}
+                  {selectedApplied.periods_applied} appliquée(s){selectedApplied.periods_ignored > 0 ? ` · ${selectedApplied.periods_ignored} non appliquée(s)` : ""}
                 </Badge>
               </div>
               {selectedAppliedWarning && (

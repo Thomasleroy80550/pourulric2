@@ -489,6 +489,7 @@ export async function handleChannelFeatures(
     const existing = validatePricingRead(await callCadence("owner-site-pricing", { params: { property_id: assignment.property_id } }), assignment);
     if (existing.beyond_linked) throw new ChannelFeatureError(409, "Ce logement est lié à Beyond : ses prix et restrictions viennent de Beyond");
     const periods = validatePricingPeriods(body.periods);
+    console.info("[owner-channel-proxy] owner pricing submit", { propertyId: assignment.property_id, count: periods.length });
     const payload = await callCadence("owner-site-pricing", {
       method: "POST",
       body: { property_id: assignment.property_id, periods },

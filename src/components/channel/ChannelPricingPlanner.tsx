@@ -268,6 +268,7 @@ export default function ChannelPricingPlanner() {
   const [selectionStart, setSelectionStart] = useState<string | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [allowEmptyReplace, setAllowEmptyReplace] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [appliedByAssignment, setAppliedByAssignment] = useState<Record<string, ChannelPricingReplaceResult>>({});
@@ -379,6 +380,7 @@ export default function ChannelPricingPlanner() {
     setSelectionStart(null);
     setSelectionEnd(null);
     setConfirmed(false);
+    setAllowEmptyReplace(false);
     setFormError("");
   };
 
@@ -495,17 +497,26 @@ export default function ChannelPricingPlanner() {
       setFormError(candidate.error);
       return;
     }
+    if (candidate.rows.length === 0 && !allowEmptyReplace) {
+      setFormError("Aucune période à envoyer. Ajoutez un prix ou confirmez explicitement la suppression de toutes vos périodes.");
+      return;
+    }
+    console.info("[ChannelPricingPlanner] Envoi des prix à Cadence", {
+      periods: candidate.rows.length,
+      emptyReplaceConfirmed: allowEmptyReplace,
+    });
     setSaving(true);
-    setStatus({ type: "loading", message: "Envoi du planning vers Cadence et NextPax…" });
+    setStatus({ type: "loading", message: "Envoi du planning à Cadence… Cadence transmettra ensuite à NextPax." });
     try {
       const result = await replaceChannelPricing(selectedAssignmentId, candidate.rows);
       setAppliedByAssignment(previous => ({ ...previous, [selectedAssignmentId]: result }));
       setDrafts(previous => ({ ...previous, [selectedAssignmentId]: candidate.candidateDrafts }));
       setConfirmed(false);
+      setAllowEmptyReplace(false);
       closeEditor();
       await refreshAssignment(selectedAssignmentId);
-      setStatus({ type: "success", message: `${result.periods_applied} période(s) appliquée(s) et synchronisée(s).` });
-      toast.success(`${result.periods_applied} période(s) appliquée(s) et envoyée(s) vers NextPax.`);
+      setStatus({ type: "success", message: `${result.periods_applied} période(s) appliquée(s) par Cadence.` });
+      toast.success(`${result.periods_applied} période(s) appliquée(s) : Cadence les transmet maintenant à NextPax.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Impossible d’envoyer les prix à Cadence.";
       setFormError(message);
@@ -529,7 +540,7 @@ export default function ChannelPricingPlanner() {
             <Euro className="h-5 w-5 text-emerald-600 sm:h-6 sm:w-6" />
             Prix & restrictions
           </h2>
-          <p className="text-sm text-muted-foreground">Assignez un prix/nuit et un séjour minimum par période — sauvegardé et synchronisé automatiquement.</p>
+          <p className="text-sm text-muted-foreground">Assignez un prix/nuit et un séjour minimum par période — l’envoi est fait à Cadence, qui transmet ensuite à NextPax.</p>
         </div>
         <div className="flex items-center justify-between gap-2 sm:justify-end">
           <Button variant="outline" size="icon" onClick={() => setCurrentMonth(month => subMonths(month, 1))} aria-label="Mois précédent"><ChevronLeft className="h-4 w-4" /></Button>
@@ -625,12 +636,18 @@ export default function ChannelPricingPlanner() {
               )}
               {!selectedDrafts.length && !editor && (
                 <Alert variant="destructive">
-                  <AlertDescription>La liste propriétaire est vide : cet envoi retirera vos périodes existantes.</AlertDescription>
+                  <AlertDescription className="space-y-3">
+                    <p>La liste propriétaire est vide : aucun prix ne sera envoyé sauf si vous confirmez la suppression de vos périodes existantes.</p>
+                    <label className="flex items-start gap-3 text-sm font-normal">
+                      <Checkbox checked={allowEmptyReplace} onCheckedChange={value => setAllowEmptyReplace(value === true)} disabled={saving || !selectedPricing} />
+                      <span>Je veux supprimer toutes mes périodes propriétaire existantes pour ce logement.</span>
+                    </label>
+                  </AlertDescription>
                 </Alert>
               )}
               <Button type="button" onClick={() => void submit()} disabled={saving || !confirmed || !selectedPricing}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {editor ? "Appliquer et synchroniser" : selectedDrafts.length ? "Sauvegarder et synchroniser" : "Retirer mes périodes propriétaire"}
+                {editor ? "Appliquer et envoyer à Cadence" : selectedDrafts.length ? "Envoyer à Cadence" : "Confirmer la suppression dans Cadence"}
               </Button>
             </div>
           )}
@@ -639,7 +656,7 @@ export default function ChannelPricingPlanner() {
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium">Périodes réellement appliquées</p>
-                <Badge variant="secondary">{selectedApplied.periods_applied} · NextPax {selectedApplied.pushed_to_nextpax ? "OK" : "non poussé"}</Badge>
+                <Badge variant="secondary">{selectedApplied.periods_applied} · Cadence → NextPax {selectedApplied.pushed_to_nextpax ? "OK" : "non poussé"}</Badge>
               </div>
               <div className="space-y-1 text-xs text-muted-foreground">
                 {selectedApplied.periods.map(period => <p key={period.id}>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)}</p>)}

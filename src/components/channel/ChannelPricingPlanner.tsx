@@ -286,6 +286,7 @@ export default function ChannelPricingPlanner() {
   const [status, setStatus] = useState<{ type: "loading" | "success" | "warning" | "error"; message: string } | null>({ type: "loading", message: "Chargement des logements et des prix…" });
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(true);
+  const [showPeriods, setShowPeriods] = useState(false);
   const [editor, setEditor] = useState<DraftPeriod | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [selectionStart, setSelectionStart] = useState<string | null>(null);
@@ -404,6 +405,7 @@ export default function ChannelPricingPlanner() {
     setSelectionEnd(null);
     setConfirmed(false);
     setAllowEmptyReplace(false);
+    setShowPeriods(false);
     setFormError("");
   };
 
@@ -473,6 +475,7 @@ export default function ChannelPricingPlanner() {
       return;
     }
     setDrafts(previous => ({ ...previous, [selectedAssignmentId]: candidate.candidateDrafts }));
+    setShowPeriods(true);
     closeEditor();
     setFormError("");
   };
@@ -653,45 +656,62 @@ export default function ChannelPricingPlanner() {
             </div>
           </details>
 
-          <div className="space-y-3">
-            <div>
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Vos prix</p>
-              <div className="flex flex-wrap gap-2">
-                {ownerChips.map(draft => (
-                  <div key={draft.key} className={cn("flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs shadow-sm dark:bg-gray-950", editingKey === draft.key && "border-emerald-500 ring-1 ring-emerald-500")}>
-                    <button type="button" onClick={() => editDraft(selectedAssignmentId, draft)} className="min-w-0 text-left" disabled={selectedPricing?.beyond_linked || saving}>
-                      <span className="font-medium">{draft.label || "Période"}</span>
-                      <span className="ml-2 text-muted-foreground">{draft.start_date} → {draft.end_date}</span>
-                      <span className="ml-2 font-semibold text-emerald-600">{formatPrice(draft.price ? Number(draft.price) : null, selectedCurrency)}</span>
-                      {draft.price && otaPriceRange(Number(draft.price), selectedCurrency) && <span className="block text-muted-foreground">OTA {otaPriceRange(Number(draft.price), selectedCurrency)}</span>}
-                    </button>
-                    <button type="button" onClick={() => removeDraft(selectedAssignmentId, draft.key)} disabled={selectedPricing?.beyond_linked || saving} aria-label="Supprimer cette période" className="rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-                {!ownerChips.length && <p className="text-sm text-muted-foreground">Aucun prix personnalisé.</p>}
-              </div>
-            </div>
-            {(cadencePeriods.length > 0 || beyondPeriods.length > 0) && (
+          <div className="rounded-lg border bg-muted/10 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Prix gérés pour vous</p>
-                <div className="flex flex-wrap gap-2">
-                  {cadencePeriods.map(period => (
-                    <span key={period.id} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                      <span>{period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)}</span>
-                      <span className="block">OTA {otaPriceRange(period.price, selectedCurrency)}</span>
-                    </span>
-                  ))}
-                  {beyondPeriods.length > 0 && (
-                    <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-orange-900 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-100">
-                      Beyond · {formatPrice(Math.min(...beyondPrices), selectedCurrency)}–{formatPrice(Math.max(...beyondPrices), selectedCurrency)}
-                    </span>
-                  )}
+                <p className="text-sm font-medium">Périodes du logement</p>
+                <p className="text-xs text-muted-foreground">
+                  {ownerChips.length} à vous · {cadencePeriods.length} conciergerie{beyondPeriods.length > 0 ? " · Beyond actif" : ""}
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowPeriods(previous => !previous)}>
+                {showPeriods ? "Masquer" : "Voir mes périodes"}
+              </Button>
+            </div>
+
+            {showPeriods && (
+              <div className="mt-4 space-y-4 border-t pt-4">
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Vos prix</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ownerChips.map(draft => (
+                      <div key={draft.key} className={cn("flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs shadow-sm dark:bg-gray-950", editingKey === draft.key && "border-emerald-500 ring-1 ring-emerald-500")}>
+                        <button type="button" onClick={() => editDraft(selectedAssignmentId, draft)} className="min-w-0 text-left" disabled={selectedPricing?.beyond_linked || saving}>
+                          <span className="font-medium">{draft.label || "Période"}</span>
+                          <span className="ml-2 text-muted-foreground">{draft.start_date} → {draft.end_date}</span>
+                          <span className="ml-2 font-semibold text-emerald-600">{formatPrice(draft.price ? Number(draft.price) : null, selectedCurrency)}</span>
+                          {draft.price && otaPriceRange(Number(draft.price), selectedCurrency) && <span className="block text-muted-foreground">OTA {otaPriceRange(Number(draft.price), selectedCurrency)}</span>}
+                        </button>
+                        <button type="button" onClick={() => removeDraft(selectedAssignmentId, draft.key)} disabled={selectedPricing?.beyond_linked || saving} aria-label="Supprimer cette période" className="rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {!ownerChips.length && <p className="text-sm text-muted-foreground">Aucun prix personnalisé.</p>}
+                  </div>
                 </div>
+
+                {(cadencePeriods.length > 0 || beyondPeriods.length > 0) && (
+                  <div>
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Prix gérés pour vous</p>
+                    <div className="flex flex-wrap gap-2">
+                      {cadencePeriods.map(period => (
+                        <span key={period.id} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                          <span>{period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)}</span>
+                          <span className="block">OTA {otaPriceRange(period.price, selectedCurrency)}</span>
+                        </span>
+                      ))}
+                      {beyondPeriods.length > 0 && (
+                        <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-orange-900 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-100">
+                          Beyond · {formatPrice(Math.min(...beyondPrices), selectedCurrency)}–{formatPrice(Math.max(...beyondPrices), selectedCurrency)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">Si une date est déjà gérée par la conciergerie, elle est conservée telle quelle.</p>
               </div>
             )}
-            <p className="text-xs text-muted-foreground">Si une date est déjà gérée par la conciergerie, elle est conservée telle quelle.</p>
           </div>
 
           {!selectedPricing?.beyond_linked && (

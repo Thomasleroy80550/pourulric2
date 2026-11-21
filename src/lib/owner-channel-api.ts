@@ -1,8 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface ChannelPropertyPhoto {
+  id?: string;
   url: string;
   caption?: string;
+  position?: number;
 }
 export interface ChannelProperty {
   id: string;
@@ -18,6 +20,11 @@ export interface ChannelProperty {
   images?: Array<string | ChannelPropertyPhoto>;
   pictures?: Array<string | ChannelPropertyPhoto>;
   media?: Array<string | ChannelPropertyPhoto>;
+  amenities?: unknown;
+  equipment?: unknown;
+  equipments?: unknown;
+  features?: unknown;
+  facilities?: unknown;
   agency_id?: string;
   environment?: string;
   assignment_id?: string;

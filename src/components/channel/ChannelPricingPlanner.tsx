@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addDays,
   addMonths,
@@ -17,22 +17,17 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Euro,
   Loader2,
   Search,
-  Send,
-  Trash2,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import ChannelPricingEditor, { type DraftPeriod } from "./ChannelPricingEditor";
+import ChannelPricingPeriodsSheet from "./ChannelPricingPeriodsSheet";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getReservationSources, type ReservationSource } from "@/lib/channel-reservations-api";
@@ -49,30 +44,10 @@ import {
 } from "@/lib/channel-features-api";
 
 const DESKTOP_DAY_WIDTH = 82;
-const MOBILE_DAY_WIDTH = 56;
+const MOBILE_DAY_WIDTH = 72;
 const DESKTOP_LABEL_WIDTH = 230;
-const MOBILE_LABEL_WIDTH = 160;
+const MOBILE_LABEL_WIDTH = 130;
 const ROW_MIN_HEIGHT = 78;
-
-const AVATAR_COLORS = [
-  "bg-emerald-500",
-  "bg-sky-500",
-  "bg-violet-500",
-  "bg-rose-500",
-  "bg-amber-500",
-  "bg-cyan-600",
-  "bg-indigo-500",
-];
-
-interface DraftPeriod {
-  key: string;
-  start_date: string;
-  end_date: string;
-  price: string;
-  min_stay: string;
-  max_stay: string;
-  label: string;
-}
 
 interface PlanEntry {
   pricing: ChannelPricingRead | null;
@@ -103,16 +78,9 @@ const sourceLabels: Record<ChannelPricingSource, string> = {
 
 const sourceCellClasses: Record<ChannelPricingSource, string> = {
   owner: "bg-emerald-50 dark:bg-emerald-950/25",
-  cadence: "bg-amber-50 dark:bg-amber-950/25",
-  beyond: "bg-orange-50 dark:bg-orange-950/25",
+  cadence: "bg-muted/20",
+  beyond: "bg-muted/20",
   default: "bg-white dark:bg-gray-950",
-};
-
-const sourceDotClasses: Record<ChannelPricingSource, string> = {
-  owner: "bg-emerald-500",
-  cadence: "bg-amber-500",
-  beyond: "bg-orange-500",
-  default: "bg-slate-400",
 };
 
 const OTA_MARKUPS = [
@@ -169,7 +137,7 @@ function parseDraft(period: DraftPeriod, name = "Période"):
   const maxStart = parisMaxStart();
   if (period.end_date < today || period.start_date > maxStart) return { error: `${name} : seules les périodes à venir, débutant dans les 3 ans, sont acceptées.` };
   const price = Number(period.price);
-  if (!Number.isFinite(price) || price < 0 || price > 100000) return { error: `${name} : prix entre 0 et 100 000.` };
+  if (!period.price.trim() || !Number.isFinite(price) || price < 0 || price > 100000) return { error: `${name} : prix entre 0 et 100 000.` };
   const minStay = Number(period.min_stay || "1");
   if (!Number.isInteger(minStay) || minStay < 1 || minStay > 365) return { error: `${name} : séjour minimum entre 1 et 365 nuits.` };
   const maxStay = period.max_stay.trim() ? Number(period.max_stay) : undefined;
@@ -240,23 +208,6 @@ function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).map(part => part[0]).join("").slice(0, 2).toUpperCase() || "LG";
 }
 
-function draftAsPeriod(draft: DraftPeriod): ChannelPricingReadPeriod | null {
-  if (!draft.start_date || !draft.end_date || draft.start_date > draft.end_date) return null;
-  const price = draft.price.trim() ? Number(draft.price) : null;
-  const minStay = draft.min_stay.trim() ? Number(draft.min_stay) : null;
-  const maxStay = draft.max_stay.trim() ? Number(draft.max_stay) : null;
-  return {
-    id: draft.key,
-    source: "owner",
-    label: draft.label.trim() || null,
-    start_date: draft.start_date,
-    end_date: draft.end_date,
-    price: price !== null && Number.isFinite(price) ? price : 0,
-    min_stay: minStay !== null && Number.isInteger(minStay) ? minStay : null,
-    max_stay: maxStay !== null && Number.isInteger(maxStay) ? maxStay : null,
-  };
-}
-
 function isWeekend(date: Date) {
   return date.getDay() === 0 || date.getDay() === 6;
 }
@@ -285,14 +236,13 @@ export default function ChannelPricingPlanner() {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "loading" | "success" | "warning" | "error"; message: string } | null>({ type: "loading", message: "Chargement des logements et des prix…" });
   const [search, setSearch] = useState("");
-  const [formOpen, setFormOpen] = useState(true);
   const [showPeriods, setShowPeriods] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DraftPeriod | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<DraftPeriod | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [selectionStart, setSelectionStart] = useState<string | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<string | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
-  const [allowEmptyReplace, setAllowEmptyReplace] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [appliedByAssignment, setAppliedByAssignment] = useState<Record<string, ChannelPricingReplaceResult>>({});
@@ -356,7 +306,7 @@ export default function ChannelPricingPlanner() {
         setPlans(nextPlans);
         setDrafts(nextDrafts);
         setSelectedAssignmentId(assignments.find(source => nextPlans[source.id]?.pricing)?.id ?? assignments[0]?.id ?? "");
-        setStatus(assignments.length ? { type: "success", message: "Planning de prix chargé." } : null);
+        setStatus(null);
       } catch (error) {
         if (active) setStatus({ type: "error", message: error instanceof Error ? error.message : "Impossible de charger les logements Cadence." });
       } finally {
@@ -385,27 +335,25 @@ export default function ChannelPricingPlanner() {
 
   const dailyPrice = useCallback((source: ReservationSource, dateIso: string): DailyPrice => {
     const plan = plans[source.id];
-    const ownerDraftPeriods = (drafts[source.id] ?? []).map(draftAsPeriod).filter((period): period is ChannelPricingReadPeriod => Boolean(period));
-    const savedPeriods = plan?.pricing?.periods.filter(period => period.source !== "owner") ?? [];
-    const period = [...savedPeriods, ...ownerDraftPeriods]
+    const period = [...(plan?.pricing?.periods ?? [])]
       .filter(item => item.start_date <= dateIso && item.end_date >= dateIso)
       .sort((a, b) => sourcePriority(a.source) - sourcePriority(b.source) || a.start_date.localeCompare(b.start_date))[0];
     if (period) {
       return { price: period.price, min_stay: period.min_stay, max_stay: period.max_stay, source: period.source, label: period.label };
     }
     return { price: plan?.pricing?.base_price ?? null, min_stay: null, max_stay: null, source: "default", label: null };
-  }, [plans, drafts]);
+  }, [plans]);
 
   const selectAssignment = (assignmentId: string) => {
-    if (assignmentId === selectedAssignmentId) return;
+    if (saving || assignmentId === selectedAssignmentId) return;
     setSelectedAssignmentId(assignmentId);
     setEditor(null);
     setEditingKey(null);
     setSelectionStart(null);
     setSelectionEnd(null);
-    setConfirmed(false);
-    setAllowEmptyReplace(false);
     setShowPeriods(false);
+    setDeleteTarget(null);
+    setStatus(null);
     setFormError("");
   };
 
@@ -419,13 +367,14 @@ export default function ChannelPricingPlanner() {
     }
     const assignmentChanged = selectedAssignmentId !== source.id;
     if (assignmentChanged) selectAssignment(source.id);
-    setFormOpen(true);
     setFormError("");
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     if (assignmentChanged || !selectionStart || selectionEnd) {
       setSelectionStart(dateIso);
       setSelectionEnd(null);
       setEditingKey(null);
-      setEditor({ ...newDraft(), start_date: dateIso, end_date: dateIso });
+      const current = dailyPrice(source, dateIso);
+      setEditor({ ...newDraft(), start_date: dateIso, end_date: dateIso, price: current.price === null ? "" : String(current.price), min_stay: String(current.min_stay || 1), max_stay: current.max_stay === null ? "" : String(current.max_stay) });
       return;
     }
     const start = dateIso < selectionStart ? dateIso : selectionStart;
@@ -440,8 +389,9 @@ export default function ChannelPricingPlanner() {
     selectAssignment(assignmentId);
     setEditingKey(draft.key);
     setEditor({ ...draft });
-    setFormOpen(true);
+    setShowPeriods(false);
     setFormError("");
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const closeEditor = () => {
@@ -451,39 +401,30 @@ export default function ChannelPricingPlanner() {
     setSelectionEnd(null);
   };
 
-  const buildCandidate = (): { candidateDrafts: DraftPeriod[]; rows: ChannelPricingPeriodInput[] } | { error: string } => {
-    let candidateDrafts = selectedDrafts;
-    if (editor) {
-      const parsed = parseDraft(editor, editingKey ? "La période modifiée" : "La nouvelle période");
-      if ("error" in parsed) return { error: parsed.error };
-      const editorDraft = { ...editor, key: editingKey ?? crypto.randomUUID() };
-      candidateDrafts = editingKey
-        ? selectedDrafts.map(draft => draft.key === editingKey ? editorDraft : draft)
-        : [...selectedDrafts, editorDraft];
+  const buildCandidate = (): { candidateDrafts: DraftPeriod[] } | { error: string } => {
+    if (!editor) return { error: "Choisissez vos dates et votre prix." };
+    const parsed = parseDraft(editor, "Votre prix");
+    if ("error" in parsed) return { error: parsed.error };
+    const candidateDrafts: DraftPeriod[] = [];
+    for (const draft of selectedDrafts) {
+      if (draft.key === editingKey || draft.end_date < todayIso) continue;
+      if (draft.end_date < editor.start_date || draft.start_date > editor.end_date) {
+        candidateDrafts.push(draft);
+        continue;
+      }
+      if (draft.start_date < editor.start_date) {
+        const date = new Date(editor.start_date + "T00:00:00Z");
+        date.setUTCDate(date.getUTCDate() - 1);
+        candidateDrafts.push({ ...draft, end_date: date.toISOString().slice(0, 10) });
+      }
+      if (draft.end_date > editor.end_date) {
+        const date = new Date(editor.end_date + "T00:00:00Z");
+        date.setUTCDate(date.getUTCDate() + 1);
+        candidateDrafts.push({ ...draft, key: crypto.randomUUID(), start_date: date.toISOString().slice(0, 10) });
+      }
     }
-    candidateDrafts = [...candidateDrafts].sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
-    const normalizedCandidate = normalizeDrafts(candidateDrafts);
-    if ("error" in normalizedCandidate) return { error: normalizedCandidate.error };
-    return { candidateDrafts, rows: normalizedCandidate.rows };
-  };
-
-  const applyEditor = () => {
-    if (!editor || !selectedAssignmentId) return;
-    const candidate = buildCandidate();
-    if ("error" in candidate) {
-      setFormError(candidate.error);
-      return;
-    }
-    setDrafts(previous => ({ ...previous, [selectedAssignmentId]: candidate.candidateDrafts }));
-    setShowPeriods(true);
-    closeEditor();
-    setFormError("");
-  };
-
-  const removeDraft = (assignmentId: string, key: string) => {
-    setDrafts(previous => ({ ...previous, [assignmentId]: (previous[assignmentId] ?? []).filter(draft => draft.key !== key) }));
-    if (editingKey === key) closeEditor();
-    setFormError("");
+    candidateDrafts.push({ ...editor });
+    return { candidateDrafts };
   };
 
   const refreshAssignment = async (assignmentId: string) => {
@@ -504,283 +445,176 @@ export default function ChannelPricingPlanner() {
     }
   };
 
-  const submit = async () => {
+  const persist = async (candidateDrafts: DraftPeriod[], deletionConfirmed = false) => {
+    if (saving || !selectedAssignmentId || !selectedPricing || selectedPricing.beyond_linked || selectedPlan?.pricingError) return false;
+    const normalized = normalizeDrafts(candidateDrafts.filter(draft => draft.end_date >= todayIso));
+    if ("error" in normalized) {
+      setFormError(normalized.error);
+      return false;
+    }
+    if (!normalized.rows.length && !deletionConfirmed) {
+      setFormError("Choisissez vos dates et votre prix avant d’enregistrer.");
+      return false;
+    }
+    const assignmentId = selectedAssignmentId;
     setFormError("");
-    if (!selectedAssignmentId || !selectedPricing) {
-      setFormError("Sélectionnez un logement dont les prix ont été lus avant l’envoi.");
-      return;
-    }
-    if (selectedPricing.beyond_linked) {
-      setFormError("Ce logement est lié à Beyond : ses prix et restrictions viennent de Beyond.");
-      return;
-    }
-    if (!confirmed) {
-      setFormError("Confirmez que ce planning remplace toutes vos périodes propriétaire existantes.");
-      return;
-    }
-    const candidate = buildCandidate();
-    if ("error" in candidate) {
-      setFormError(candidate.error);
-      return;
-    }
-    if (candidate.rows.length === 0 && !allowEmptyReplace) {
-      setFormError("Aucune période à envoyer. Ajoutez un prix ou confirmez explicitement la suppression de toutes vos périodes.");
-      return;
-    }
-    console.info("[ChannelPricingPlanner] Envoi des prix à Cadence", {
-      periods: candidate.rows.length,
-      rows: candidate.rows.map(row => ({
-        start_date: row.start_date,
-        end_date: row.end_date,
-        price: row.price,
-        min_stay: row.min_stay,
-      })),
-      emptyReplaceConfirmed: allowEmptyReplace,
-    });
     setSaving(true);
-    setStatus({ type: "loading", message: "Envoi du planning à Cadence… Cadence transmettra ensuite à NextPax." });
+    setStatus(null);
+    console.info("[ChannelPricingPlanner] Envoi des prix à Cadence", { periods: normalized.rows.length });
     try {
-      const result = await replaceChannelPricing(selectedAssignmentId, candidate.rows);
-      setAppliedByAssignment(previous => ({ ...previous, [selectedAssignmentId]: result }));
-      setDrafts(previous => ({ ...previous, [selectedAssignmentId]: candidate.candidateDrafts }));
-      setConfirmed(false);
-      setAllowEmptyReplace(false);
+      const result = await replaceChannelPricing(assignmentId, normalized.rows);
+      setAppliedByAssignment(previous => ({ ...previous, [assignmentId]: result }));
+      const appliedDrafts: DraftPeriod[] = result.periods.map(period => ({
+        key: period.id,
+        start_date: period.start_date,
+        end_date: period.end_date,
+        price: String(period.price),
+        min_stay: String(period.min_stay),
+        max_stay: period.max_stay == null ? "" : String(period.max_stay),
+        label: period.label ?? "",
+      }));
+      setDrafts(previous => ({ ...previous, [assignmentId]: appliedDrafts }));
       closeEditor();
-      await refreshAssignment(selectedAssignmentId);
-      const warning = replaceWarning(result);
-      if (warning) {
-        setStatus({ type: "warning", message: warning });
-        toast.warning(warning);
-      } else {
-        setStatus({ type: "success", message: `${result.periods_applied} période(s) appliquée(s) par Cadence.` });
-        toast.success(`${result.periods_applied} période(s) appliquée(s) : Cadence les transmet maintenant à NextPax.`);
-      }
+      await refreshAssignment(assignmentId);
+      const warning = replaceWarning(result) || (!result.pushed_to_nextpax ? "Vos prix sont enregistrés, mais leur diffusion sur les plateformes n’est pas encore confirmée." : null);
+      const message = warning || (deletionConfirmed ? "La période a été supprimée." : "Vos prix sont enregistrés.");
+      setStatus({ type: warning ? "warning" : "success", message });
+      if (warning) toast.warning(message);
+      else toast.success(message);
+      return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Impossible d’envoyer les prix à Cadence.";
+      const message = error instanceof Error ? error.message : "Impossible d’enregistrer vos prix. Réessayez.";
       setFormError(message);
       setStatus({ type: "error", message });
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
-  const ownerChips = selectedDrafts;
-  const cadencePeriods = selectedPricing?.periods.filter(period => period.source === "cadence") ?? [];
-  const beyondPeriods = selectedPricing?.periods.filter(period => period.source === "beyond") ?? [];
-  const beyondPrices = beyondPeriods.map(period => period.price);
+  const submit = async () => {
+    if (saving) return;
+    const candidate = buildCandidate();
+    if ("error" in candidate) {
+      setFormError(candidate.error);
+      return;
+    }
+    await persist(candidate.candidateDrafts);
+  };
+
+  const deletePeriod = async () => {
+    if (!deleteTarget || saving) return;
+    const success = await persist(selectedDrafts.filter(draft => draft.key !== deleteTarget.key), true);
+    if (success) setDeleteTarget(null);
+    else {
+      setDeleteTarget(null);
+      setShowPeriods(false);
+    }
+  };
+
   const selectedCurrency = selectedPricing?.currency ?? "EUR";
   const selectedAppliedWarning = selectedApplied ? replaceWarning(selectedApplied) : null;
+  const selectedSource = sources.find(source => source.id === selectedAssignmentId);
+  const otaPrices = editor?.price.trim() && Number.isFinite(Number(editor.price)) && Number(editor.price) >= 0
+    ? OTA_MARKUPS.map(channel => ({ name: channel.name, price: formatPrice(otaPrice(Number(editor.price), channel.multiplier), selectedCurrency), markup: Math.round((channel.multiplier - 1) * 100) }))
+    : [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight sm:text-2xl">
-            <Euro className="h-5 w-5 text-emerald-600 sm:h-6 sm:w-6" />
-            Prix & restrictions
-          </h2>
-          <p className="text-sm text-muted-foreground">Choisissez un logement, une période et un prix. Cadence applique les dates disponibles.</p>
-        </div>
-        <div className="flex items-center justify-between gap-2 sm:justify-end">
-          <Button variant="outline" size="icon" onClick={() => setCurrentMonth(month => subMonths(month, 1))} aria-label="Mois précédent"><ChevronLeft className="h-4 w-4" /></Button>
-          <span className="min-w-[150px] text-center text-sm font-semibold sm:text-base">{capitalize(format(currentMonth, "MMMM yyyy", { locale: fr }))}</span>
-          <Button variant="outline" size="icon" onClick={() => setCurrentMonth(month => addMonths(month, 1))} aria-label="Mois suivant"><ChevronRight className="h-4 w-4" /></Button>
-          <Button variant="secondary" size="sm" onClick={() => setCurrentMonth(new Date())}>Aujourd'hui</Button>
-        </div>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">Mes prix</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Choisissez vos dates, indiquez votre prix. C’est tout.</p>
       </div>
 
-      {status && (
-        <Alert className={cn(
-          status.type === "success" && "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100",
-          status.type === "warning" && "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100",
-          status.type === "error" && "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30",
-        )}>
-          {status.type === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : status.type === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className={cn("h-4 w-4", status.type === "warning" ? "text-amber-600" : "text-red-600")} />}
+      {status && status.type !== "success" && (
+        <Alert className={cn(status.type === "warning" && "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100")} variant={status.type === "error" ? "destructive" : "default"}>
+          {status.type === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertCircle className="h-4 w-4" />}
           <AlertDescription>{status.message}</AlertDescription>
         </Alert>
       )}
 
-      <details open={formOpen} onToggle={event => setFormOpen(event.currentTarget.open)} className="group rounded-xl border bg-card shadow-sm">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 font-medium">
-          <span>Ajouter ou modifier un prix</span>
-          <Badge variant="secondary">{selectedDrafts.length} période(s)</Badge>
-        </summary>
-        <div className="space-y-4 border-t p-4">
-          {selectedPricing?.beyond_linked && (
-            <Alert variant="destructive">
-              <AlertTitle>Tarification gérée par Beyond</AlertTitle>
-              <AlertDescription>Les prix et restrictions de ce logement viennent de Beyond. La grille est en lecture seule.</AlertDescription>
-            </Alert>
-          )}
-          {formError && <Alert variant="destructive"><AlertDescription>{formError}</AlertDescription></Alert>}
+      <div ref={editorRef}>
+        <ChannelPricingEditor
+          properties={sources.map(source => ({ id: source.id, name: propertyName(source) }))}
+          selectedId={selectedAssignmentId}
+          onSelect={selectAssignment}
+          draft={editor}
+          onChange={patch => {
+            setEditor(previous => ({ ...(previous ?? newDraft()), ...patch }));
+            setFormError("");
+            setStatus(null);
+          }}
+          onSave={() => void submit()}
+          onCancel={() => { closeEditor(); setFormError(""); }}
+          onShowPeriods={() => setShowPeriods(true)}
+          minDate={todayIso}
+          currency={selectedCurrency}
+          disabled={!selectedPricing || Boolean(selectedPlan?.pricingError) || baseLoading}
+          readOnly={Boolean(selectedPricing?.beyond_linked)}
+          saving={saving}
+          error={formError || selectedPlan?.pricingError || ""}
+          otaPrices={otaPrices}
+        />
+      </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <div className="space-y-2 md:col-span-2 xl:col-span-2">
-              <Label>Logement</Label>
-              <Select value={selectedAssignmentId} onValueChange={selectAssignment} disabled={!sources.length || saving}>
-                <SelectTrigger><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
-                <SelectContent>
-                  {sources.map(source => <SelectItem key={source.id} value={source.id}>{propertyName(source)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2"><Label>Début</Label><Input type="date" value={editor?.start_date ?? ""} min={todayIso} onChange={event => setEditor(previous => previous ? { ...previous, start_date: event.target.value } : { ...newDraft(), start_date: event.target.value, end_date: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
-            <div className="space-y-2"><Label>Fin</Label><Input type="date" value={editor?.end_date ?? ""} min={editor?.start_date || todayIso} onChange={event => setEditor(previous => previous ? { ...previous, end_date: event.target.value } : { ...newDraft(), start_date: event.target.value, end_date: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
-            <div className="space-y-2"><Label>Prix / nuit ({selectedCurrency})</Label><Input type="number" min="0" max="100000" step="1" value={editor?.price ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, price: event.target.value } : { ...newDraft(), price: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
-            <div className="space-y-2"><Label>Nuits min.</Label><Input type="number" min="1" max="365" step="1" value={editor?.min_stay ?? "1"} onChange={event => setEditor(previous => previous ? { ...previous, min_stay: event.target.value } : { ...newDraft(), min_stay: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
-            <div className="flex items-end gap-2 md:col-span-2 xl:col-span-6">
-              <Button type="button" variant="outline" onClick={applyEditor} disabled={!editor || !selectedPricing || selectedPricing.beyond_linked || saving}>{editingKey ? "Mettre à jour la période" : "Ajouter à la liste"}</Button>
-              {editor && <Button type="button" variant="outline" onClick={closeEditor} disabled={saving}>Annuler</Button>}
-            </div>
+      {selectedApplied && !editor && (
+        <details key={selectedAssignmentId + JSON.stringify(selectedApplied)} open={Boolean(selectedAppliedWarning)} className="rounded-xl border bg-card px-4 py-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm">
+            <span className="flex items-center gap-2"><CheckCircle2 className={cn("h-4 w-4", selectedAppliedWarning ? "text-amber-500" : "text-emerald-600")} />{selectedAppliedWarning ? "Voir les dates appliquées" : "Prix enregistrés"}</span>
+            <span className="text-xs text-muted-foreground">Détails</span>
+          </summary>
+          <div className="mt-3 space-y-2 border-t pt-3 text-sm">
+            <p className="text-xs text-muted-foreground">{selectedApplied.periods_received} reçue(s) · {selectedApplied.periods_applied} appliquée(s) · {selectedApplied.periods_ignored} non appliquée(s)</p>
+            {selectedAppliedWarning && <p className="text-sm text-amber-700 dark:text-amber-300">{selectedAppliedWarning}</p>}
+            {selectedApplied.periods.length ? selectedApplied.periods.map(period => (
+              <div key={period.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/20 p-3">
+                <div><p>{format(new Date(period.start_date + "T00:00:00"), "d MMM yyyy", { locale: fr })} → {format(new Date(period.end_date + "T00:00:00"), "d MMM yyyy", { locale: fr })}</p><p className="mt-1 text-xs text-muted-foreground">Plateformes : {otaPriceRange(period.price, selectedCurrency, true)} estimés · {period.min_stay} nuit(s) minimum</p></div>
+                <p className="font-semibold">{formatPrice(period.price, selectedCurrency)} / nuit</p>
+              </div>
+            )) : <p className="text-muted-foreground">Aucune date n’a été appliquée. Les prix de la conciergerie sont conservés.</p>}
           </div>
+        </details>
+      )}
 
-          {editor?.price && Number.isFinite(Number(editor.price)) && Number(editor.price) >= 0 && (
-            <div className="rounded-lg border bg-muted/10 p-3">
-              <p className="mb-2 text-sm font-medium">Prix estimés sur les OTA</p>
-              <div className="grid gap-2">
-                {OTA_MARKUPS.map(channel => (
-                  <div key={channel.name} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm" style={{ borderColor: channel.color, backgroundColor: `${channel.color}1A` }}>
-                    <span className="font-medium" style={{ color: channel.color }}>{channel.name} +{Math.round((channel.multiplier - 1) * 100)}%</span>
-                    <span className="font-semibold tabular-nums">{formatPrice(otaPrice(Number(editor.price), channel.multiplier), selectedCurrency)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      <ChannelPricingPeriodsSheet
+        open={showPeriods}
+        onOpenChange={setShowPeriods}
+        propertyName={selectedSource ? propertyName(selectedSource) : "Mon logement"}
+        drafts={selectedDrafts}
+        managedPeriods={selectedPricing?.periods.filter(period => period.source === "cadence" || period.source === "beyond") ?? []}
+        canEdit={Boolean(selectedPricing && !selectedPricing.beyond_linked && !selectedPlan?.pricingError)}
+        saving={saving}
+        onEdit={draft => editDraft(selectedAssignmentId, draft)}
+        onDelete={setDeleteTarget}
+        formatPrice={price => formatPrice(price, selectedCurrency)}
+        otaRange={price => otaPriceRange(price, selectedCurrency, true)}
+      />
 
-          <details className="rounded-lg border bg-muted/10 px-3 py-2">
-            <summary className="cursor-pointer text-sm text-muted-foreground">Options avancées</summary>
-            <div className="grid gap-3 pt-3 md:grid-cols-2">
-              <div className="space-y-2"><Label>Nuits max. (optionnel)</Label><Input type="number" min={editor?.min_stay || "1"} step="1" value={editor?.max_stay ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, max_stay: event.target.value } : { ...newDraft(), max_stay: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} /></div>
-              <div className="space-y-2"><Label>Nom période (optionnel)</Label><Input maxLength={60} value={editor?.label ?? ""} onChange={event => setEditor(previous => previous ? { ...previous, label: event.target.value } : { ...newDraft(), label: event.target.value })} disabled={!selectedPricing || selectedPricing.beyond_linked || saving} placeholder="Été 2027" /></div>
-            </div>
-          </details>
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={open => { if (!open && !saving) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer ce prix personnalisé ?</AlertDialogTitle>
+            <AlertDialogDescription>Le prix personnalisé sera retiré sur ces dates. Vos autres périodes et les prix de la conciergerie seront conservés.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Annuler</AlertDialogCancel>
+            <AlertDialogAction disabled={saving} onClick={event => { event.preventDefault(); void deletePeriod(); }} className="bg-red-600 text-white hover:bg-red-700">{saving ? "Suppression…" : "Supprimer"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-          <div className="rounded-lg border bg-muted/10 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium">Périodes du logement</p>
-                <p className="text-xs text-muted-foreground">
-                  {ownerChips.length} à vous · {cadencePeriods.length} conciergerie{beyondPeriods.length > 0 ? " · Beyond actif" : ""}
-                </p>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => setShowPeriods(previous => !previous)}>
-                {showPeriods ? "Masquer" : "Voir mes périodes"}
-              </Button>
-            </div>
-
-            {showPeriods && (
-              <div className="mt-4 space-y-4 border-t pt-4">
-                <div>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Vos prix</p>
-                  <div className="flex flex-wrap gap-2">
-                    {ownerChips.map(draft => (
-                      <div key={draft.key} className={cn("flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-xs shadow-sm dark:bg-gray-950", editingKey === draft.key && "border-emerald-500 ring-1 ring-emerald-500")}>
-                        <button type="button" onClick={() => editDraft(selectedAssignmentId, draft)} className="min-w-0 text-left" disabled={selectedPricing?.beyond_linked || saving}>
-                          <span className="font-medium">{draft.label || "Période"}</span>
-                          <span className="ml-2 text-muted-foreground">{draft.start_date} → {draft.end_date}</span>
-                          <span className="ml-2 font-semibold text-emerald-600">{formatPrice(draft.price ? Number(draft.price) : null, selectedCurrency)}</span>
-                          {draft.price && otaPriceRange(Number(draft.price), selectedCurrency) && <span className="block text-muted-foreground">OTA {otaPriceRange(Number(draft.price), selectedCurrency)}</span>}
-                        </button>
-                        <button type="button" onClick={() => removeDraft(selectedAssignmentId, draft.key)} disabled={selectedPricing?.beyond_linked || saving} aria-label="Supprimer cette période" className="rounded-full p-0.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    {!ownerChips.length && <p className="text-sm text-muted-foreground">Aucun prix personnalisé.</p>}
-                  </div>
-                </div>
-
-                {(cadencePeriods.length > 0 || beyondPeriods.length > 0) && (
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Prix gérés pour vous</p>
-                    <div className="flex flex-wrap gap-2">
-                      {cadencePeriods.map(period => (
-                        <span key={period.id} className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                          <span>{period.label || "Conciergerie"} · {period.start_date} → {period.end_date} · {formatPrice(period.price, selectedCurrency)}</span>
-                          <span className="block">OTA {otaPriceRange(period.price, selectedCurrency)}</span>
-                        </span>
-                      ))}
-                      {beyondPeriods.length > 0 && (
-                        <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-orange-900 dark:border-orange-900 dark:bg-orange-950/30 dark:text-orange-100">
-                          Beyond · {formatPrice(Math.min(...beyondPrices), selectedCurrency)}–{formatPrice(Math.max(...beyondPrices), selectedCurrency)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <p className="text-xs text-muted-foreground">Si une date est déjà gérée par la conciergerie, elle est conservée telle quelle.</p>
-              </div>
-            )}
-          </div>
-
-          {!selectedPricing?.beyond_linked && (
-            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-              <label className="flex items-start gap-3 text-sm">
-                <Checkbox checked={confirmed} onCheckedChange={value => setConfirmed(value === true)} disabled={saving || !selectedPricing} />
-                <span>Je confirme l’enregistrement de ces prix.</span>
-              </label>
-              {editor && <p className="text-xs text-muted-foreground">La période en cours sera ajoutée automatiquement.</p>}
-              {!selectedDrafts.length && !editor && (
-                <Alert variant="destructive">
-                  <AlertDescription className="space-y-3">
-                    <p>Aucune période n’est prête à être enregistrée.</p>
-                    <label className="flex items-start gap-3 text-sm font-normal">
-                      <Checkbox checked={allowEmptyReplace} onCheckedChange={value => setAllowEmptyReplace(value === true)} disabled={saving || !selectedPricing} />
-                      <span>Supprimer mes prix personnalisés existants.</span>
-                    </label>
-                  </AlertDescription>
-                </Alert>
-              )}
-              <Button type="button" onClick={() => void submit()} disabled={saving || !confirmed || !selectedPricing}>
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {selectedDrafts.length || editor ? "Enregistrer" : "Supprimer mes prix"}
-              </Button>
-            </div>
-          )}
-
-          {selectedApplied && (
-            <div className="rounded-lg border bg-muted/20 p-3">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-medium">Résultat de l’enregistrement</p>
-                <Badge variant="secondary">
-                  {selectedApplied.periods_applied} appliquée(s){selectedApplied.periods_ignored > 0 ? ` · ${selectedApplied.periods_ignored} non appliquée(s)` : ""}
-                </Badge>
-              </div>
-              {selectedAppliedWarning && (
-                <Alert className="mb-3 border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-                  <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription>{selectedAppliedWarning}</AlertDescription>
-                </Alert>
-              )}
-              <div className="space-y-1 text-xs text-muted-foreground">
-                {selectedApplied.periods.length
-                  ? selectedApplied.periods.map(period => (
-                    <div key={period.id}>
-                      <p>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)} · {period.min_stay} nuit(s) min.</p>
-                      <p className="text-[11px]">OTA {otaPriceRange(period.price, selectedCurrency)}</p>
-                    </div>
-                  ))
-                  : <p>Aucune plage n’a été appliquée par Cadence.</p>}
-              </div>
-            </div>
-          )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-sm font-medium"><CalendarDays className="h-4 w-4 text-muted-foreground" /> Mon calendrier</div>
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/30 p-1">
+          <Button type="button" variant="ghost" size="icon" onClick={() => setCurrentMonth(month => subMonths(month, 1))} aria-label="Mois précédent"><ChevronLeft className="h-4 w-4" /></Button>
+          <span className="min-w-[140px] text-center text-sm font-medium">{capitalize(format(currentMonth, "MMMM yyyy", { locale: fr }))}</span>
+          <Button type="button" variant="ghost" size="icon" onClick={() => setCurrentMonth(month => addMonths(month, 1))} aria-label="Mois suivant"><ChevronRight className="h-4 w-4" /></Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setCurrentMonth(new Date())}>Aujourd’hui</Button>
         </div>
-      </details>
-
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full lg:w-80">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher un logement…" className="pl-9" />
-        </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-emerald-500" /> Vos prix</span>
-          <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-amber-500" /> Gestionnaire</span>
-          <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-orange-500" /> Beyond</span>
-          <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-slate-400" /> Prix de base</span>
-          <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-indigo-500" /> Réservé / bloqué</span>
-          <span>OTA : estimation avec markup Airbnb / Booking / Abritel</span>
-        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">Touchez une date pour modifier son prix. La ligne du dessous estime le prix sur les plateformes.</p>
+        {sources.length > 1 && <div className="relative w-full sm:w-56"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Rechercher un logement" value={search} onChange={event => setSearch(event.target.value)} placeholder="Rechercher un logement" className="rounded-xl pl-9" /></div>}
       </div>
 
       <Card className="overflow-hidden border-slate-200 dark:border-slate-700">
@@ -810,16 +644,14 @@ export default function ChannelPricingPlanner() {
               filteredSources.map((source, sourceIndex) => {
                 const plan = plans[source.id] ?? emptyEntry;
                 const name = propertyName(source);
-                const city = propertyCity(source);
                 const beyondLinked = Boolean(plan.pricing?.beyond_linked);
                 return (
                   <div key={source.id} className={cn("flex border-b border-slate-100 dark:border-slate-800", selectedAssignmentId === source.id && "bg-emerald-50/40 dark:bg-emerald-950/10")} style={{ minHeight: ROW_MIN_HEIGHT }}>
                     <div className={cn("sticky left-0 z-20 flex items-center gap-3 border-r border-slate-200 px-3 dark:border-slate-700", selectedAssignmentId === source.id ? "bg-emerald-50 dark:bg-emerald-950/30" : sourceIndex % 2 === 0 ? "bg-white dark:bg-gray-950" : "bg-slate-50/80 dark:bg-gray-900/50")} style={{ width: labelWidth, minWidth: labelWidth }}>
-                      <div className={cn("flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm", AVATAR_COLORS[sourceIndex % AVATAR_COLORS.length])}>{initials(name)}</div>
+                      <div className="hidden h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground sm:flex">{initials(name)}</div>
                       <div className="min-w-0">
-                        <button type="button" onClick={() => selectAssignment(source.id)} className="block max-w-full truncate text-left text-sm font-semibold text-slate-800 hover:text-emerald-700 dark:text-slate-100">{name}</button>
-                        <p className="truncate text-xs text-muted-foreground">{city}</p>
-                        <p className="mt-0.5 text-[10px] text-muted-foreground">base {formatPrice(plan.pricing?.base_price ?? null, plan.pricing?.currency ?? "EUR")}</p>
+                        <button type="button" disabled={saving} onClick={() => selectAssignment(source.id)} className="block max-w-full truncate text-left text-sm font-semibold text-slate-800 hover:text-emerald-700 dark:text-slate-100">{name}</button>
+                        {beyondLinked && <p className="mt-1 text-xs text-muted-foreground">Prix automatiques</p>}
                       </div>
                     </div>
 
@@ -861,8 +693,8 @@ export default function ChannelPricingPlanner() {
                               <span className="text-xs font-semibold">{label}</span>
                             ) : (
                               <>
-                                <span className={cn("text-sm font-semibold", daily.source === "owner" && "text-emerald-700 dark:text-emerald-300", daily.source === "cadence" && "text-amber-700 dark:text-amber-300", daily.source === "beyond" && "text-orange-700 dark:text-orange-300")}>{formatPrice(daily.price, plan.pricing?.currency ?? "EUR")}</span>
-                                {otaRange && <span className="mt-0.5 text-[9px] font-medium text-slate-500 dark:text-slate-400">OTA {otaRange}</span>}
+                                <span className={cn("text-sm font-semibold", daily.source === "owner" && "text-emerald-700 dark:text-emerald-300", daily.source === "cadence" && "text-foreground", daily.source === "beyond" && "text-foreground")}>{formatPrice(daily.price, plan.pricing?.currency ?? "EUR")}</span>
+                                {otaRange && <span className="mt-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">≈ {otaRange}</span>}
                                 <span className="mt-0.5 text-[10px] text-muted-foreground">{daily.min_stay ? `${daily.min_stay} nuits min.` : "—"}</span>
                               </>
                             )}
@@ -878,6 +710,11 @@ export default function ChannelPricingPlanner() {
         </div>
       </Card>
 
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Mes prix</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-400" /> Prix habituels</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-indigo-400" /> Réservé / bloqué</span>
+      </div>
       {calendarLoading && <p className="flex items-center text-xs text-muted-foreground"><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Mise à jour des disponibilités…</p>}
       {Object.values(plans).some(plan => plan.calendarError) && (
         <Alert variant="destructive">

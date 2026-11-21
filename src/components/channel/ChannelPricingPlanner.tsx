@@ -351,7 +351,6 @@ export default function ChannelPricingPlanner() {
   const selectedPricing = selectedPlan?.pricing ?? null;
   const selectedDrafts = selectedAssignmentId ? drafts[selectedAssignmentId] ?? [] : [];
   const selectedApplied = selectedAssignmentId ? appliedByAssignment[selectedAssignmentId] : undefined;
-  const normalized = useMemo(() => normalizeDrafts(selectedDrafts), [selectedDrafts]);
 
   const filteredSources = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -425,31 +424,30 @@ export default function ChannelPricingPlanner() {
     setSelectionEnd(null);
   };
 
+  const buildCandidate = (): { candidateDrafts: DraftPeriod[]; rows: ChannelPricingPeriodInput[] } | { error: string } => {
+    let candidateDrafts = selectedDrafts;
+    if (editor) {
+      const parsed = parseDraft(editor, editingKey ? "La période modifiée" : "La nouvelle période");
+      if ("error" in parsed) return { error: parsed.error };
+      const editorDraft = { ...editor, key: editingKey ?? crypto.randomUUID() };
+      candidateDrafts = editingKey
+        ? selectedDrafts.map(draft => draft.key === editingKey ? editorDraft : draft)
+        : [...selectedDrafts, editorDraft];
+    }
+    candidateDrafts = [...candidateDrafts].sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
+    const normalizedCandidate = normalizeDrafts(candidateDrafts);
+    if ("error" in normalizedCandidate) return { error: normalizedCandidate.error };
+    return { candidateDrafts, rows: normalizedCandidate.rows };
+  };
+
   const applyEditor = () => {
     if (!editor || !selectedAssignmentId) return;
-    const parsed = parseDraft(editor, editingKey ? "La période modifiée" : "La nouvelle période");
-    if ("error" in parsed) {
-      setFormError(parsed.error);
+    const candidate = buildCandidate();
+    if ("error" in candidate) {
+      setFormError(candidate.error);
       return;
     }
-    for (const draft of selectedDrafts) {
-      if (draft.key === editingKey) continue;
-      const other = parseDraft(draft, "Une période existante");
-      if ("error" in other) {
-        setFormError(other.error);
-        return;
-      }
-      if (parsed.row.start_date <= other.row.end_date && other.row.start_date <= parsed.row.end_date) {
-        setFormError(`Chevauchement avec ${other.row.start_date} → ${other.row.end_date}.`);
-        return;
-      }
-    }
-    setDrafts(previous => ({
-      ...previous,
-      [selectedAssignmentId]: editingKey
-        ? (previous[selectedAssignmentId] ?? []).map(draft => draft.key === editingKey ? { ...editor } : draft)
-        : [...(previous[selectedAssignmentId] ?? []), { ...editor, key: crypto.randomUUID() }].sort((a, b) => a.start_date.localeCompare(b.start_date)),
-    }));
+    setDrafts(previous => ({ ...previous, [selectedAssignmentId]: candidate.candidateDrafts }));
     closeEditor();
     setFormError("");
   };
@@ -488,24 +486,23 @@ export default function ChannelPricingPlanner() {
       setFormError("Ce logement est lié à Beyond : ses prix et restrictions viennent de Beyond.");
       return;
     }
-    if (editor) {
-      setFormError("Appliquez ou annulez la période en cours avant l’envoi.");
-      return;
-    }
     if (!confirmed) {
       setFormError("Confirmez que ce planning remplace toutes vos périodes propriétaire existantes.");
       return;
     }
-    if ("error" in normalized) {
-      setFormError(normalized.error);
+    const candidate = buildCandidate();
+    if ("error" in candidate) {
+      setFormError(candidate.error);
       return;
     }
     setSaving(true);
     setStatus({ type: "loading", message: "Envoi du planning vers Cadence et NextPax…" });
     try {
-      const result = await replaceChannelPricing(selectedAssignmentId, normalized.rows);
+      const result = await replaceChannelPricing(selectedAssignmentId, candidate.rows);
       setAppliedByAssignment(previous => ({ ...previous, [selectedAssignmentId]: result }));
+      setDrafts(previous => ({ ...previous, [selectedAssignmentId]: candidate.candidateDrafts }));
       setConfirmed(false);
+      closeEditor();
       await refreshAssignment(selectedAssignmentId);
       setStatus({ type: "success", message: `${result.periods_applied} période(s) appliquée(s) et synchronisée(s).` });
       toast.success(`${result.periods_applied} période(s) appliquée(s) et envoyée(s) vers NextPax.`);
@@ -621,9 +618,19 @@ export default function ChannelPricingPlanner() {
                 <Checkbox checked={confirmed} onCheckedChange={value => setConfirmed(value === true)} disabled={saving || !selectedPricing} />
                 <span>Je confirme que ce planning remplace toutes mes périodes propriétaire existantes pour ce logement.</span>
               </label>
-              <Button type="button" onClick={() => void submit()} disabled={saving || !confirmed || !selectedPricing || Boolean(editor)}>
+              {editor && (
+                <Alert>
+                  <AlertDescription>La période en cours de saisie sera appliquée automatiquement avant l’envoi.</AlertDescription>
+                </Alert>
+              )}
+              {!selectedDrafts.length && !editor && (
+                <Alert variant="destructive">
+                  <AlertDescription>La liste propriétaire est vide : cet envoi retirera vos périodes existantes.</AlertDescription>
+                </Alert>
+              )}
+              <Button type="button" onClick={() => void submit()} disabled={saving || !confirmed || !selectedPricing}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {selectedDrafts.length ? "Sauvegarder et synchroniser" : "Retirer mes périodes propriétaire"}
+                {editor ? "Appliquer et synchroniser" : selectedDrafts.length ? "Sauvegarder et synchroniser" : "Retirer mes périodes propriétaire"}
               </Button>
             </div>
           )}

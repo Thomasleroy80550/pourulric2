@@ -58,7 +58,10 @@ export interface ChannelPricingRead {
 }
 export interface ChannelPricingReplaceResult {
   property_id: string;
+  periods_received: number;
   periods_applied: number;
+  periods_ignored: number;
+  warning: string | null;
   periods: ChannelPricingPeriod[];
   pushed_to_nextpax: boolean;
 }

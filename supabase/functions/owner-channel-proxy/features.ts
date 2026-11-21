@@ -268,10 +268,13 @@ function validatePricingRead(payload: Record<string, unknown>, assignment: Assig
   };
 }
 
-function validatePricingResponse(payload: Record<string, unknown>, assignment: Assignment) {
+function validatePricingResponse(payload: Record<string, unknown>, assignment: Assignment, requestedCount: number) {
   if (typeof payload.property_id !== "string" || payload.property_id.toLowerCase() !== assignment.property_id.toLowerCase() ||
       typeof payload.periods_applied !== "number" || !Number.isInteger(payload.periods_applied) || payload.periods_applied < 0 ||
-      typeof payload.pushed_to_nextpax !== "boolean" || !Array.isArray(payload.periods)) {
+      typeof payload.pushed_to_nextpax !== "boolean" || !Array.isArray(payload.periods) ||
+      (payload.periods_received != null && (typeof payload.periods_received !== "number" || !Number.isInteger(payload.periods_received) || payload.periods_received < 0)) ||
+      (payload.periods_ignored != null && (typeof payload.periods_ignored !== "number" || !Number.isInteger(payload.periods_ignored) || payload.periods_ignored < 0)) ||
+      (payload.warning != null && typeof payload.warning !== "string")) {
     throw new ChannelFeatureError(502, "Réponse prix non conforme au contrat API.");
   }
   const periods = payload.periods.map((item: unknown) => {
@@ -286,7 +289,16 @@ function validatePricingResponse(payload: Record<string, unknown>, assignment: A
     }
     return period;
   });
-  return { property_id: assignment.property_id, periods_applied: payload.periods_applied, periods, pushed_to_nextpax: payload.pushed_to_nextpax };
+  const periodsReceived = payload.periods_received ?? requestedCount;
+  return {
+    property_id: assignment.property_id,
+    periods_received: periodsReceived,
+    periods_applied: payload.periods_applied,
+    periods_ignored: payload.periods_ignored ?? Math.max(0, periodsReceived - payload.periods_applied),
+    warning: payload.warning ?? null,
+    periods,
+    pushed_to_nextpax: payload.pushed_to_nextpax,
+  };
 }
 
 function validateCalendar(payload: Record<string, unknown>, assignment: Assignment) {
@@ -515,35 +527,20 @@ export async function handleChannelFeatures(
         end_date: period.end_date,
       })),
     });
-    const coveringManager = existing.periods.find(period =>
-      period.source === "cadence" && periods.length > 0 &&
-      periods.every(row => period.start_date <= row.start_date && period.end_date >= row.end_date)
-    );
-    if (coveringManager) {
-      throw new ChannelFeatureError(409, `Ces dates sont déjà gérées par votre conciergerie (${coveringManager.start_date} → ${coveringManager.end_date}). Choisissez des dates hors période gestionnaire.`);
-    }
     const payload = await callCadence("owner-site-pricing", {
       method: "POST",
       body: { property_id: assignment.property_id, periods },
     });
-    const result = validatePricingResponse(payload, assignment);
+    const result = validatePricingResponse(payload, assignment, periods.length);
     console.info("[owner-channel-proxy] owner pricing replaced", {
       propertyId: assignment.property_id,
-      count: result.periods_applied,
+      received: result.periods_received,
+      applied: result.periods_applied,
+      ignored: result.periods_ignored,
+      warning: result.warning,
       returnedPeriods: result.periods.length,
       pushedToNextPax: result.pushed_to_nextpax,
     });
-    if (periods.length > 0 && result.periods_applied === 0) {
-      const overlappingManager = existing.periods.find(period =>
-        period.source === "cadence" && periods.some(row => row.start_date <= period.end_date && row.end_date >= period.start_date)
-      );
-      throw new ChannelFeatureError(
-        409,
-        overlappingManager
-          ? `Cadence n’a appliqué aucune période propriétaire : ces dates chevauchent une période gestionnaire (${overlappingManager.start_date} → ${overlappingManager.end_date}).`
-          : "Cadence a reçu la période mais n’en a appliqué aucune.",
-      );
-    }
     return result;
   }
 

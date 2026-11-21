@@ -6,7 +6,6 @@ import {
   endOfMonth,
   format,
   isSameDay,
-  parseISO,
   startOfDay,
   startOfMonth,
   subMonths,
@@ -185,32 +184,6 @@ function normalizeDrafts(periods: DraftPeriod[]) {
   return { rows: sorted };
 }
 
-function shiftDate(date: string, days: number) {
-  return format(addDays(parseISO(date), days), "yyyy-MM-dd");
-}
-
-function splitOutsideManagerPeriods(rows: ChannelPricingPeriodInput[], managerPeriods: ChannelPricingReadPeriod[]) {
-  const sortedManagers = [...managerPeriods].sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
-  const result: ChannelPricingPeriodInput[] = [];
-  for (const row of rows) {
-    let segments: ChannelPricingPeriodInput[] = [{ ...row }];
-    for (const manager of sortedManagers) {
-      const next: ChannelPricingPeriodInput[] = [];
-      for (const segment of segments) {
-        if (manager.end_date < segment.start_date || manager.start_date > segment.end_date) {
-          next.push(segment);
-          continue;
-        }
-        if (segment.start_date < manager.start_date) next.push({ ...segment, end_date: shiftDate(manager.start_date, -1) });
-        if (segment.end_date > manager.end_date) next.push({ ...segment, start_date: shiftDate(manager.end_date, 1) });
-      }
-      segments = next;
-    }
-    result.push(...segments);
-  }
-  return result.sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
-}
-
 function formatPrice(price: number | null, currency: string) {
   if (price === null || !Number.isFinite(price)) return "—";
   try {
@@ -227,6 +200,13 @@ function fullPrice(price: number | null, currency: string) {
   } catch {
     return `${price} ${currency}`;
   }
+}
+
+function replaceWarning(result: ChannelPricingReplaceResult) {
+  const received = result.periods_received ?? result.periods_applied;
+  const ignored = result.periods_ignored ?? Math.max(0, received - result.periods_applied);
+  if (ignored <= 0 && result.periods_applied >= received) return null;
+  return result.warning?.trim() || "Certaines périodes sont couvertes par des prix saisis par la conciergerie, qui priment — seules les plages libres ont été appliquées";
 }
 
 function propertyName(source: ReservationSource) {
@@ -286,7 +266,7 @@ export default function ChannelPricingPlanner() {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [baseLoading, setBaseLoading] = useState(true);
   const [calendarLoading, setCalendarLoading] = useState(false);
-  const [status, setStatus] = useState<{ type: "loading" | "success" | "error"; message: string } | null>({ type: "loading", message: "Chargement des logements et des prix…" });
+  const [status, setStatus] = useState<{ type: "loading" | "success" | "warning" | "error"; message: string } | null>({ type: "loading", message: "Chargement des logements et des prix…" });
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(true);
   const [editor, setEditor] = useState<DraftPeriod | null>(null);
@@ -421,13 +401,6 @@ export default function ChannelPricingPlanner() {
     const assignmentChanged = selectedAssignmentId !== source.id;
     if (assignmentChanged) selectAssignment(source.id);
     setFormOpen(true);
-    const managerPeriod = plan.pricing.periods.find(period =>
-      period.source === "cadence" && period.start_date <= dateIso && period.end_date >= dateIso
-    );
-    if (managerPeriod) {
-      setFormError(`Le ${dateIso} est déjà géré par votre conciergerie (${managerPeriod.start_date} → ${managerPeriod.end_date}). Choisissez une date hors période gestionnaire.`);
-      return;
-    }
     setFormError("");
     if (assignmentChanged || !selectionStart || selectionEnd) {
       setSelectionStart(dateIso);
@@ -472,19 +445,7 @@ export default function ChannelPricingPlanner() {
     candidateDrafts = [...candidateDrafts].sort((a, b) => a.start_date.localeCompare(b.start_date) || a.end_date.localeCompare(b.end_date));
     const normalizedCandidate = normalizeDrafts(candidateDrafts);
     if ("error" in normalizedCandidate) return { error: normalizedCandidate.error };
-    const managerPeriods = selectedPricing?.periods.filter(period => period.source === "cadence") ?? [];
-    const rows = splitOutsideManagerPeriods(normalizedCandidate.rows, managerPeriods);
-    if (normalizedCandidate.rows.length > 0 && rows.length === 0) {
-      const managerPeriod = managerPeriods.find(period =>
-        normalizedCandidate.rows.some(row => row.start_date <= period.end_date && row.end_date >= period.start_date)
-      );
-      return {
-        error: managerPeriod
-          ? `Ces dates sont déjà gérées par votre conciergerie (${managerPeriod.start_date} → ${managerPeriod.end_date}). Choisissez des dates hors période gestionnaire.`
-          : "Ces dates sont déjà gérées par votre conciergerie.",
-      };
-    }
-    return { candidateDrafts, rows };
+    return { candidateDrafts, rows: normalizedCandidate.rows };
   };
 
   const applyEditor = () => {
@@ -566,8 +527,14 @@ export default function ChannelPricingPlanner() {
       setAllowEmptyReplace(false);
       closeEditor();
       await refreshAssignment(selectedAssignmentId);
-      setStatus({ type: "success", message: `${result.periods_applied} période(s) appliquée(s) par Cadence.` });
-      toast.success(`${result.periods_applied} période(s) appliquée(s) : Cadence les transmet maintenant à NextPax.`);
+      const warning = replaceWarning(result);
+      if (warning) {
+        setStatus({ type: "warning", message: warning });
+        toast.warning(warning);
+      } else {
+        setStatus({ type: "success", message: `${result.periods_applied} période(s) appliquée(s) par Cadence.` });
+        toast.success(`${result.periods_applied} période(s) appliquée(s) : Cadence les transmet maintenant à NextPax.`);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Impossible d’envoyer les prix à Cadence.";
       setFormError(message);
@@ -582,6 +549,7 @@ export default function ChannelPricingPlanner() {
   const beyondPeriods = selectedPricing?.periods.filter(period => period.source === "beyond") ?? [];
   const beyondPrices = beyondPeriods.map(period => period.price);
   const selectedCurrency = selectedPricing?.currency ?? "EUR";
+  const selectedAppliedWarning = selectedApplied ? replaceWarning(selectedApplied) : null;
 
   return (
     <div className="space-y-4">
@@ -602,8 +570,12 @@ export default function ChannelPricingPlanner() {
       </div>
 
       {status && (
-        <Alert className={cn(status.type === "success" && "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100", status.type === "error" && "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30")}>
-          {status.type === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : status.type === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-red-600" />}
+        <Alert className={cn(
+          status.type === "success" && "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100",
+          status.type === "warning" && "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100",
+          status.type === "error" && "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30",
+        )}>
+          {status.type === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : status.type === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className={cn("h-4 w-4", status.type === "warning" ? "text-amber-600" : "text-red-600")} />}
           <AlertDescription>{status.message}</AlertDescription>
         </Alert>
       )}
@@ -707,10 +679,20 @@ export default function ChannelPricingPlanner() {
             <div className="rounded-lg border bg-muted/20 p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-medium">Périodes réellement appliquées</p>
-                <Badge variant="secondary">{selectedApplied.periods_applied} · Cadence → NextPax {selectedApplied.pushed_to_nextpax ? "OK" : "non poussé"}</Badge>
+                <Badge variant="secondary">
+                  {selectedApplied.periods_received} reçue(s) · {selectedApplied.periods_applied} appliquée(s) · {selectedApplied.periods_ignored} ignorée(s) · NextPax {selectedApplied.pushed_to_nextpax ? "OK" : "non poussé"}
+                </Badge>
               </div>
+              {selectedAppliedWarning && (
+                <Alert className="mb-3 border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription>{selectedAppliedWarning}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-1 text-xs text-muted-foreground">
-                {selectedApplied.periods.map(period => <p key={period.id}>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)}</p>)}
+                {selectedApplied.periods.length
+                  ? selectedApplied.periods.map(period => <p key={period.id}>{period.start_date} → {period.end_date}{period.label ? ` · ${period.label}` : ""} · {fullPrice(period.price, selectedCurrency)} · {period.min_stay} nuit(s) min.</p>)
+                  : <p>Aucune plage n’a été appliquée par Cadence.</p>}
               </div>
             </div>
           )}

@@ -50,7 +50,8 @@ import {
   BellRing,
   Building2,
   KeyRound,
-  Presentation
+  Presentation,
+  Star
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,7 @@ const adminNavigationCategories = [
     items: [
       { name: 'Tableau de Bord', href: '/admin', icon: Home, description: "Vue d'ensemble de l'activité." },
       { name: 'Keynote Cadence', href: '/admin/keynote', icon: Presentation, description: 'Présentation Cadence pour les propriétaires Hello Keys.' },
+      { name: 'Avis Keynote', href: '/admin/keynote-avis', icon: Star, description: 'Retours des propriétaires sur la présentation Cadence.' },
       { name: 'Stats Hello Keys', href: '/admin/hello-keys-stats', icon: BarChart3, description: 'Statistiques de facturation de Hello Keys.' },
       { name: 'Stats Kross', href: '/admin/kross-stats', icon: BarChart3, description: 'CA, clients, nuits et réservations Krossbooking par période.' },
       { name: 'Revue Client', href: '/admin/client-performance', icon: BarChart3, description: 'Synthèse mensuelle par client.' },

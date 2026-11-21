@@ -23,6 +23,7 @@ import {
   FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -350,9 +351,9 @@ const PriceRestrictionDialog: React.FC<PriceRestrictionDialogProps> = ({
             </DialogDescription>
           </DialogHeader>
           <div className="max-w-md space-y-2">
-            <FormLabel>Logement Cadence</FormLabel>
+            <Label htmlFor="cadence-property-select">Logement Cadence</Label>
             <Select value={channelAssignmentId} onValueChange={setChannelAssignmentId} disabled={!linkedChannelSources.length}>
-              <SelectTrigger><SelectValue placeholder="Choisir un logement lié" /></SelectTrigger>
+              <SelectTrigger id="cadence-property-select"><SelectValue placeholder="Choisir un logement lié" /></SelectTrigger>
               <SelectContent>
                 {linkedChannelSources.map(source => (
                   <SelectItem key={source.id} value={source.id}>{source.property_name || source.user_rooms?.room_name || source.property_id}</SelectItem>

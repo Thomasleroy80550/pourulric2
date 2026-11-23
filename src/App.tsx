@@ -94,6 +94,7 @@ import RedeemInvitePage from './pages/RedeemInvitePage';
 import JoinSharedSpacePage from './pages/JoinSharedSpacePage';
 import SpaceSelectionPage from './pages/SpaceSelectionPage';
 import Season2026Page from "./pages/Season2026Page";
+import Season2027Page from "./pages/Season2027Page";
 import AdminSeasonRequestsPage from "./pages/AdminSeasonRequestsPage";
 import AdminHivernageEmailPage from './pages/AdminHivernageEmailPage';
 import Hivernage2026Page from "./pages/Hivernage2026Page";
@@ -323,6 +324,7 @@ function App() {
                       <Route path="/espaces" element={<SpaceSelectionPage />} />
                       <Route path="/season-2026" element={<Season2026Page />} />
                       <Route path="/season-2026/prices" element={<MySeasonPricesPage />} />
+                      <Route path="/season-2027" element={<Season2027Page />} />
                       <Route path="/hivernage-2026" element={<Hivernage2026Page />} />
                       <Route path="/hivernage-2027" element={<Hivernage2026Page />} />
                       <Route path="/powersense" element={<PowerSenseLandingFull />} />

@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { storeBeyondLinked } from "./beyond.ts";
 
 type Selection = { property_id: string; client_profile_id: string };
-type Catalog = { properties: { id: string }[]; agency_id: string; environment: string };
+type Catalog = { properties: { id: string; beyond_linked?: unknown }[]; agency_id: string; environment: string };
 type Result = Selection & { success: boolean; message: string };
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -68,6 +69,7 @@ export async function assignOnboardingBatch(
   const assignedIds = new Set(existing.map(link => link.property_id));
   const results: Result[] = [];
   const verified: Selection[] = [];
+  const imported: Catalog["properties"] = [];
   let retryAfter = 0;
   let stoppedMessage = "";
   for (const item of selections) {
@@ -84,10 +86,12 @@ export async function assignOnboardingBatch(
         stoppedMessage = "L’agence ou l’environnement de la clé a changé. Rechargez le catalogue.";
         results.push({ ...item, success: false, message: stoppedMessage }); continue;
       }
-      if (!detail.properties.some(property => property.id.toLowerCase() === item.property_id)) {
+      const property = detail.properties.find(property => property.id.toLowerCase() === item.property_id);
+      if (!property) {
         results.push({ ...item, success: false, message: "Logement absent ou supprimé." }); continue;
       }
       verified.push(item);
+      imported.push(property);
     } catch (error) {
       const status = error && typeof error === "object" && "status" in error ? Number(error.status) : 500;
       const message = error instanceof Error ? error.message : "Impossible de vérifier ce logement.";
@@ -108,6 +112,7 @@ export async function assignOnboardingBatch(
       { onConflict: "client_profile_id,property_id,agency_id,environment", ignoreDuplicates: true },
     );
     if (error) throw error;
+    await storeBeyondLinked(db, { agency_id: body.agency_id, environment: body.environment }, imported);
     verified.forEach(item => results.push({ ...item, success: true, message: "Logement attribué." }));
     console.info("[owner-channel-proxy] onboarding batch assigned", { count: verified.length });
   }

@@ -91,7 +91,7 @@ const SingleRequestExportMenu: React.FC<Props> = ({ request }) => {
     let y = 10;
 
     pdf.setFontSize(14);
-    pdf.text("Demande Saison 2026", 10, y);
+    pdf.text(`Demande Saison ${request.season_year}`, 10, y);
     y += 8;
 
     pdf.setFontSize(10);

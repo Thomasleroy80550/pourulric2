@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { storeBeyondLinked } from "./beyond.ts";
 
 const reservationsEndpoint = "https://kbdjwnfpgwzbxskiaddg.supabase.co/functions/v1/owner-site-reservations";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -146,6 +147,9 @@ export async function handleReservations(
     if (propertyName && propertyName !== link.property_name) {
       const { error } = await db.from("channel_property_assignments").update({ property_name: propertyName }).eq("id", link.id);
       if (error) throw error;
+    }
+    if (typeof property.beyond_linked === "boolean" && property.beyond_linked !== link.beyond_linked) {
+      await storeBeyondLinked(db, link, [{ id: link.property_id, beyond_linked: property.beyond_linked }]);
     }
     if (body.restart === true) {
       const { error } = await db.from("channel_reservation_sync_jobs").delete().eq("assignment_id", link.id)

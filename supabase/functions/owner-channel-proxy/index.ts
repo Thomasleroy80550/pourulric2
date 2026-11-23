@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { assignOnboardingBatch, defaultRoomIds, loadOnboardingContext } from "./onboarding.ts";
 import { handleReservations, ReservationRequestError } from "./reservations.ts";
 import { ChannelFeatureError, handleChannelFeatures } from "./features.ts";
+import { storeBeyondLinked } from "./beyond.ts";
 
 const endpoint = "https://kbdjwnfpgwzbxskiaddg.supabase.co/functions/v1/owner-site-properties";
 const corsHeaders = {
@@ -75,11 +76,14 @@ serve(async (req) => {
     }
     if (body.action === "catalog") {
       if (body.cursor != null && (typeof body.cursor !== "string" || body.cursor.length > 4096)) return json({ error: "Curseur invalide." }, 400);
-      return json(await upstream({ limit: "100", ...(body.cursor ? { cursor: body.cursor } : {}) }));
+      const page = await upstream({ limit: "100", ...(body.cursor ? { cursor: body.cursor } : {}) });
+      await storeBeyondLinked(db, page, page.properties);
+      return json(page);
     }
     if (body.action === "property_detail") {
       if (typeof body.property_id !== "string" || !uuid.test(body.property_id)) return json({ error: "UUID de logement invalide." }, 400);
       const detail = await upstream({ property_id: body.property_id });
+      await storeBeyondLinked(db, detail, detail.properties);
       const property = detail.properties.find((item: { id: string }) => item.id.toLowerCase() === body.property_id.toLowerCase());
       if (property) console.info("[owner-channel-proxy] property detail fields", { propertyId: body.property_id, fields: Object.keys(property) });
       return json(detail);
@@ -106,6 +110,7 @@ serve(async (req) => {
         user_room_id: roomIds.get(body.client_profile_id) ?? null,
       }, { onConflict: "client_profile_id,property_id,agency_id,environment", ignoreDuplicates: true });
       if (error) throw error;
+      await storeBeyondLinked(db, detail, detail.properties);
       console.info("[owner-channel-proxy] property assigned", { profileId: body.client_profile_id, propertyId: body.property_id });
       return json({ success: true });
     }
@@ -145,12 +150,16 @@ serve(async (req) => {
             const property = detail.properties.find((p: { id: string }) => p.id.toLowerCase() === link.property_id.toLowerCase());
             if (property) {
               console.info("[owner-channel-proxy] property detail fields", { propertyId: link.property_id, fields: Object.keys(property) });
+              // Without a flag from Cadence, the value of the last synchronisation is kept.
+              const beyondLinked = typeof property.beyond_linked === "boolean" ? property.beyond_linked : link.beyond_linked;
+              if (beyondLinked !== link.beyond_linked) await storeBeyondLinked(db, detail, [property]);
               properties.push({
                 ...property,
                 agency_id: detail.agency_id,
                 environment: detail.environment,
                 assignment_id: link.id,
                 user_room_id: link.user_room_id,
+                beyond_linked: beyondLinked,
               });
             }
           }

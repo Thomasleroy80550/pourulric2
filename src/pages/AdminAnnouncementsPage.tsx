@@ -55,6 +55,7 @@ const PAGE_SHORTCUTS = [
   { label: "Thermo Sync", value: "/thermo-sync" },
   { label: "ThermoBnB", value: "/thermobnb" },
   { label: "Saison 2026", value: "/season-2026" },
+  { label: "Saison 2027", value: "/season-2027" },
   { label: "Hivernage 2026–2027", value: "/hivernage-2027" },
   { label: "Nouveautés", value: "/new-version" },
   { label: "Marketplace", value: "/marketplace" },

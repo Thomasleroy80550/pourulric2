@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import SmartPricingNotice from "@/components/SmartPricingNotice";
 
 export interface DraftPeriod {
   key: string;
@@ -59,10 +60,7 @@ export default function ChannelPricingEditor({
       </div>
 
       {readOnly ? (
-        <div className="rounded-xl bg-muted/40 p-4">
-          <p className="font-medium">Vos prix sont gérés automatiquement</p>
-          <p className="mt-1 text-sm text-muted-foreground">Beyond s’occupe de vos tarifs. Vous pouvez les consulter dans le calendrier.</p>
-        </div>
+        <SmartPricingNotice />
       ) : (
         <form onSubmit={event => { event.preventDefault(); onSave(); }}>
           <div className="grid items-start gap-6 md:grid-cols-[1.5fr_1fr_auto]">

@@ -29,6 +29,7 @@ export interface ChannelProperty {
   environment?: string;
   assignment_id?: string;
   user_room_id?: string | null;
+  beyond_linked?: boolean;
 }
 export interface ChannelAssignment {
   id: string;
@@ -37,6 +38,7 @@ export interface ChannelAssignment {
   agency_id: string;
   environment: string;
   user_room_id?: string | null;
+  beyond_linked?: boolean;
 }
 export interface ChannelPage {
   properties: ChannelProperty[];

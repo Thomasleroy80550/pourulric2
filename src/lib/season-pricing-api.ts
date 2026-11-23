@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getMyChannelProperties } from "@/lib/owner-channel-api";
 import { sendEmail } from "@/lib/notifications-api";
 import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
 import DOMPurify from "dompurify";
@@ -126,6 +127,41 @@ export const getExistingSeasonPricingRoomIds = async (season_year: number): Prom
     .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
   return Array.from(new Set(ids));
+};
+
+/**
+ * Identifiants (user_rooms.id) des logements de l'utilisateur liés à Beyond (Smart Pricing).
+ * L'import Cadence est relancé d'abord pour rafraîchir les valeurs stockées ; si Cadence est
+ * indisponible, celles de la dernière synchronisation sont utilisées.
+ */
+export const getSmartPricingRoomIds = async (): Promise<string[]> => {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError) throw new Error(userError.message);
+  if (!user) throw new Error("Utilisateur non authentifié.");
+
+  try {
+    let cursor: string | null = null;
+    do {
+      const page = await getMyChannelProperties(cursor);
+      cursor = page.next_cursor;
+    } while (cursor);
+  } catch (error) {
+    console.warn("Cadence import unavailable, using the last synced Smart Pricing flags:", error);
+  }
+
+  const { data, error } = await supabase
+    .from('channel_property_assignments')
+    .select('user_room_id')
+    .eq('client_profile_id', user.id)
+    .eq('beyond_linked', true)
+    .not('user_room_id', 'is', null);
+
+  if (error) {
+    console.error("Error fetching Smart Pricing rooms:", error);
+    throw new Error(error.message);
+  }
+
+  return (data || []).map((row: { user_room_id: string }) => row.user_room_id);
 };
 
 export const updateSeasonPricingRequestStatus = async (id: string, status: SeasonPricingStatus): Promise<void> => {

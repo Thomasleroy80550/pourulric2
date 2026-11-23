@@ -4,6 +4,7 @@ import { assignOnboardingBatch, defaultRoomIds, loadOnboardingContext } from "./
 import { handleReservations, ReservationRequestError } from "./reservations.ts";
 import { ChannelFeatureError, handleChannelFeatures } from "./features.ts";
 import { storeBeyondLinked } from "./beyond.ts";
+import { sendSeasonToCadence } from "./season.ts";
 
 const endpoint = "https://kbdjwnfpgwzbxskiaddg.supabase.co/functions/v1/owner-site-properties";
 const corsHeaders = {
@@ -60,9 +61,10 @@ serve(async (req) => {
     const body = await req.json().catch(() => null);
     if (!body || typeof body.action !== "string") return json({ error: "Action requise." }, 400);
     const isAdmin = profile.role === "admin";
-    const adminActions = ["catalog", "property_detail", "assignments", "assign", "unassign", "link_room", "onboarding_context", "assign_batch"];
+    const adminActions = ["catalog", "property_detail", "assignments", "assign", "unassign", "link_room", "onboarding_context", "assign_batch", "season_send"];
     if (adminActions.includes(body.action) && !isAdmin) return json({ error: "Accès réservé aux administrateurs." }, 403);
 
+    if (body.action === "season_send") return json(await sendSeasonToCadence(db, body, auth.user.id, isAdmin));
     if (["reservation_sources", "reservation_cache", "reservation_sync_start", "reservation_sync_page"].includes(body.action)) {
       return json(await handleReservations(db, body, auth.user.id, isAdmin, upstream));
     }

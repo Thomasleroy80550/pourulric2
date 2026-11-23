@@ -101,7 +101,7 @@ function sameIdentity(data: Record<string, unknown>, assignment: Assignment, req
   return data.agency_id === assignment.agency_id && data.environment === assignment.environment;
 }
 
-async function callCadence(
+export async function callCadence(
   functionName: string,
   options: { method?: "GET" | "POST"; params?: Record<string, string | number>; body?: Record<string, unknown>; idempotencyKey?: string },
 ) {
@@ -193,7 +193,7 @@ function pricingError(index: number, message: string): never {
   throw new ChannelFeatureError(400, `periods[${index}] : ${message}`);
 }
 
-function validatePricingPeriods(value: unknown) {
+export function validatePricingPeriods(value: unknown) {
   if (!Array.isArray(value) || value.length > 500) {
     throw new ChannelFeatureError(400, "periods : liste complète des périodes tarifaires du propriétaire attendue");
   }
@@ -227,7 +227,7 @@ function validatePricingPeriods(value: unknown) {
   return periods;
 }
 
-function validatePricingRead(payload: Record<string, unknown>, assignment: Assignment) {
+export function validatePricingRead(payload: Record<string, unknown>, assignment: Assignment) {
   if (typeof payload.property_id !== "string" || payload.property_id.toLowerCase() !== assignment.property_id.toLowerCase() ||
       typeof payload.currency !== "string" || !payload.currency.trim() || payload.currency.length > 10 ||
       typeof payload.base_price !== "number" || !Number.isFinite(payload.base_price) ||
@@ -268,7 +268,7 @@ function validatePricingRead(payload: Record<string, unknown>, assignment: Assig
   };
 }
 
-function validatePricingResponse(payload: Record<string, unknown>, assignment: Assignment, requestedCount: number) {
+export function validatePricingResponse(payload: Record<string, unknown>, assignment: Assignment, requestedCount: number) {
   if (typeof payload.property_id !== "string" || payload.property_id.toLowerCase() !== assignment.property_id.toLowerCase() ||
       typeof payload.periods_applied !== "number" || !Number.isInteger(payload.periods_applied) || payload.periods_applied < 0 ||
       typeof payload.pushed_to_nextpax !== "boolean" || !Array.isArray(payload.periods) ||

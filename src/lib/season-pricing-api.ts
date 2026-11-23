@@ -33,6 +33,12 @@ export interface SeasonPricingRequest {
   items: SeasonPricingItem[];
   status: 'pending' | 'processing' | 'done' | 'cancelled';
   created_at: string;
+  cadence_send_status?: 'not_sent' | 'sending' | 'sent' | 'failed';
+  cadence_send_started_at?: string | null;
+  cadence_sent_at?: string | null;
+  cadence_sent_by?: string | null;
+  cadence_error?: string | null;
+  cadence_pushed_to_nextpax?: boolean | null;
   profiles?: {
     first_name: string | null;
     last_name: string | null;

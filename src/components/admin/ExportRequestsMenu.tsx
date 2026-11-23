@@ -16,10 +16,11 @@ type Props = {
   data: SeasonPricingRequest[];
   tableRef: RefObject<HTMLDivElement>;
   currentStatus: string;
+  seasonYear: number;
 };
 
-const ExportRequestsMenu: React.FC<Props> = ({ data, tableRef, currentStatus }) => {
-  const fileBaseName = `demandes_saison_2026_${currentStatus}_${format(new Date(), "yyyyMMdd")}`;
+const ExportRequestsMenu: React.FC<Props> = ({ data, tableRef, currentStatus, seasonYear }) => {
+  const fileBaseName = `demandes_saison_${seasonYear}_${currentStatus}_${format(new Date(), "yyyyMMdd")}`;
 
   // Helper de formatage FR pour les dates "Du" / "Au"
   const formatDateFR = (d?: string) => (d ? format(parseISO(d), "dd/MM/yyyy", { locale: fr }) : "");
@@ -108,7 +109,7 @@ const ExportRequestsMenu: React.FC<Props> = ({ data, tableRef, currentStatus }) 
 
     let y = 10;
     pdf.setFontSize(14);
-    pdf.text("Demandes Saison 2026", 10, y);
+    pdf.text(`Demandes Saison ${seasonYear}`, 10, y);
     y += 8;
     pdf.setFontSize(10);
     pdf.text(`Statut: ${currentStatus} — Export du ${format(new Date(), "dd/MM/yyyy", { locale: fr })}`, 10, y);

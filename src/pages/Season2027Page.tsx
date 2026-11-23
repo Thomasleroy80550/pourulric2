@@ -104,11 +104,9 @@ const Season2027Page = () => {
   const rooms = roomsQuery.data ?? [];
   const requestedRoomIds = requestedQuery.data ?? [];
   const smartPricingRoomIds = smartPricingQuery.data ?? [];
-  // Comme pour la saison 2026, un compte entièrement en Smart Pricing n'envoie pas de demande.
-  const accountSmartPricing = !profile?.can_manage_prices;
 
   const roomState = (room: UserRoom): RoomState => {
-    if (accountSmartPricing || smartPricingRoomIds.includes(room.id)) return "smart-pricing";
+    if (smartPricingRoomIds.includes(room.id)) return "smart-pricing";
     return requestedRoomIds.includes(room.room_id) ? "requested" : "open";
   };
   const roomLabel = (room: UserRoom) => {
@@ -170,7 +168,7 @@ const Season2027Page = () => {
             Saison 2027
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Indiquez vos prix par nuit pour chaque période, puis envoyez votre demande : notre équipe la traitera manuellement.
+            Votre demande sera enregistrée en attente dans notre suivi admin. Aucun tarif n’est envoyé à Cadence sans validation explicite de notre équipe.
           </p>
         </div>
 

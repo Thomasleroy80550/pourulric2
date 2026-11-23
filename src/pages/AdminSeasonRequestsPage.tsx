@@ -33,8 +33,18 @@ import { sendEmail } from "@/lib/notifications-api";
 import { buildNewsletterHtml } from "@/components/EmailNewsletterTheme";
 import DOMPurify from "dompurify";
 import { Switch } from "@/components/ui/switch";
+import { useSearchParams } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Season2027RequestEditor from "@/components/admin/Season2027RequestEditor";
+import SmartPricingNotice from "@/components/SmartPricingNotice";
+import { sendSeasonRequestToCadence } from "@/lib/admin-season-cadence-api";
 
 const AdminSeasonRequestsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const seasonYear = searchParams.get("year") === "2026" ? 2026 : 2027;
+  const [smartRoomIds, setSmartRoomIds] = useState<string[]>([]);
+  const [linkedRoomIds, setLinkedRoomIds] = useState<string[]>([]);
+  const [editingRequest, setEditingRequest] = useState<SeasonPricingRequest | null>(null);
   const [requests, setRequests] = useState<SeasonPricingRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,10 +78,17 @@ const AdminSeasonRequestsPage: React.FC = () => {
     const fetchRooms = async () => {
       try {
         setRoomsLoading(true);
-        const rooms = await getAllUserRooms();
+        const [rooms, assignments] = await Promise.all([
+          getAllUserRooms(),
+          supabase.from("channel_property_assignments").select("user_room_id,beyond_linked"),
+        ]);
+        if (assignments.error) throw new Error(assignments.error.message);
         setAllUserRooms(rooms);
+        setLinkedRoomIds((assignments.data || []).map(link => link.user_room_id).filter(Boolean));
+        setSmartRoomIds((assignments.data || []).filter(link => link.beyond_linked).map(link => link.user_room_id).filter(Boolean));
       } catch (err: any) {
         console.error("Erreur chargement des logements admin:", err);
+        setError(err.message || "Impossible de charger les attributions Cadence.");
       } finally {
         setRoomsLoading(false);
       }
@@ -175,10 +192,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
     }
   };
 
-  // NEW: résumé par logement (statut 2026)
   const roomsSummary = useMemo(() => {
-    const targetYear = 2026;
-    const list = requests.filter(r => r.season_year === targetYear);
+    const list = requests.filter(r => r.season_year === seasonYear);
     const statusByKey: Record<string, SeasonPricingStatus | 'none'> = {};
     list.forEach(r => {
       const key = `${r.user_id}:${r.room_id ?? r.room_name ?? 'unknown'}`;
@@ -194,15 +209,14 @@ const AdminSeasonRequestsPage: React.FC = () => {
       const status = statusByKey[key] ?? 'none';
       return { room, status };
     });
-  }, [allUserRooms, requests]);
+  }, [allUserRooms, requests, seasonYear]);
 
-  // NEW: filtrage des logements non terminés selon le switch
   const roomsFiltered = useMemo(() => {
-    return showOnlyNotDone ? roomsSummary.filter(({ status }) => status !== 'done') : roomsSummary;
-  }, [roomsSummary, showOnlyNotDone]);
+    return showOnlyNotDone ? roomsSummary.filter(({ room, status }) => status !== 'done' && !(seasonYear === 2027 && smartRoomIds.includes(room.id))) : roomsSummary;
+  }, [roomsSummary, showOnlyNotDone, seasonYear, smartRoomIds]);
 
-  // ADD: liste filtrée en fonction de l'onglet courant
-  const filtered = useMemo(() => requests.filter(r => r.status === tab), [requests, tab]);
+  const seasonRequests = requests.filter(request => request.season_year === seasonYear);
+  const filtered = seasonRequests.filter(request => request.status === tab);
 
   // ADD: handler pour mise à jour locale après création
   const handleAdminCreatedRequest = (req: SeasonPricingRequest) => {
@@ -210,11 +224,39 @@ const AdminSeasonRequestsPage: React.FC = () => {
     toast.success("Demande validée créée par l'admin.");
   };
 
-  // Appliquer une demande au logement (Krossbooking + overrides)
+  const requestRoom = (req: SeasonPricingRequest) => allUserRooms.find(room => room.user_id === req.user_id && room.room_id === req.room_id);
+  const sending = (req: SeasonPricingRequest) => applyingId === req.id || (req.cadence_send_status === 'sending' && Date.parse(req.cadence_send_started_at || '') > Date.now() - 120000);
+  const canSend = (req: SeasonPricingRequest) => {
+    const room = requestRoom(req);
+    return !roomsLoading && room && linkedRoomIds.includes(room.id) && !smartRoomIds.includes(room.id) && req.status !== 'cancelled' && req.cadence_send_status !== 'sent' && !sending(req)
+      && req.items.some(item => !item.closed) && req.items.filter(item => !item.closed).every(item => typeof item.price === 'number' && item.price > 0 && Number.isInteger(item.min_stay) && item.min_stay > 0);
+  };
+  const open2027Editor = (room: AdminUserRoom, req?: SeasonPricingRequest) => {
+    setEditingRoom(room);
+    setEditingRequest(req ?? requests.find(request => request.season_year === 2027 && request.user_id === room.user_id && request.room_id === room.room_id && request.status !== 'cancelled') ?? null);
+  };
+  const refreshFollowUp = async () => {
+    try {
+      const [list, assignments] = await Promise.all([getAllSeasonPricingRequests(), supabase.from('channel_property_assignments').select('user_room_id,beyond_linked')]);
+      if (assignments.error) throw new Error(assignments.error.message);
+      setRequests(list);
+      setLinkedRoomIds((assignments.data || []).map(link => link.user_room_id).filter(Boolean));
+      setSmartRoomIds((assignments.data || []).filter(link => link.beyond_linked).map(link => link.user_room_id).filter(Boolean));
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Actualisation impossible.'); }
+  };
+
   const applyRequestToRoom = async (req: SeasonPricingRequest) => {
-    const toastId = toast.loading("Application des prix & restrictions...");
+    const toastId = toast.loading(req.season_year === 2027 ? "Validation et envoi à Cadence…" : "Application des prix & restrictions...");
     try {
       setApplyingId(req.id);
+      if (req.season_year === 2027) {
+        const result = await sendSeasonRequestToCadence(req);
+        setRequests(prev => prev.map(request => request.id === req.id ? { ...request, ...result.request } : request));
+        if (result.warning) toast.warning(`Tarifs reçus par Cadence. ${result.warning}`, { id: toastId });
+        else toast.success(result.already_sent ? "Cette demande a déjà été envoyée à Cadence." : "Tarifs reçus par Cadence. Vous pouvez terminer la demande après vérification.", { id: toastId });
+        setPendingApply(null);
+        return;
+      }
 
       // Trouver le logement correspondant (par user_id et room_id)
       const matchingRoom = allUserRooms.find(
@@ -292,6 +334,9 @@ const AdminSeasonRequestsPage: React.FC = () => {
     } catch (err: any) {
       console.error("Erreur application de la demande au logement:", err);
       toast.error(err.message || "Erreur lors de l'application de la demande.", { id: toastId });
+      if (req.season_year === 2027) {
+        try { setRequests(await getAllSeasonPricingRequests()); } catch { toast.error("Rechargez le suivi pour consulter le résultat de l’envoi."); }
+      }
     } finally {
       setApplyingId(null);
     }
@@ -350,12 +395,13 @@ const AdminSeasonRequestsPage: React.FC = () => {
       return;
     }
     const name = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim() || "Bonjour";
-    const subject = "Relance – Formulaire Saison 2026 à compléter";
+    const subject = `Relance – Formulaire Saison ${seasonYear} à compléter`;
+    const formUrl = new URL(`/season-${seasonYear}`, window.location.origin).href;
     const bodyHtml = `
       <p>${name},</p>
-      <p>Nous vous invitons à compléter le formulaire Saison 2026 pour votre logement ${room.room_name ?? ""} afin de finaliser vos tarifs et restrictions.</p>
-      <p>Cela nous permettra d'ouvrir votre calendrier à temps et d'optimiser vos revenus pour la saison à venir.</p>
-      <p><a data-btn href="https://beta.proprietaire.hellokeys.fr">Compléter le formulaire 2026</a></p>
+      <p>Nous vous invitons à compléter le formulaire Saison ${seasonYear} pour votre logement ${room.room_name ?? ""} afin de préparer vos tarifs et restrictions.</p>
+      <p>Votre demande sera examinée par notre équipe avant toute application des prix.</p>
+      <p><a data-btn href="${formUrl}">Compléter le formulaire ${seasonYear}</a></p>
       <p>Cordialement,<br/>L'équipe Hello Keys</p>
     `;
     const themedHtml = buildNewsletterHtml({
@@ -479,43 +525,48 @@ const AdminSeasonRequestsPage: React.FC = () => {
               <TableCell>{Array.isArray(req.items) ? req.items.length : 0}</TableCell>
               <TableCell>
                 <span className="text-xs rounded bg-muted px-2 py-1 capitalize">{req.status}</span>
+                {seasonYear === 2027 && <div className="mt-2 max-w-xs text-xs text-muted-foreground">
+                  {req.cadence_send_status === 'sent' ? `Reçu par Cadence le ${safeFormat(req.cadence_sent_at, 'dd/MM/yyyy HH:mm')}` : req.cadence_send_status === 'sending' ? 'Envoi Cadence en cours — actualisez le suivi' : req.cadence_send_status === 'failed' ? 'Échec de l’envoi Cadence' : 'Non envoyé à Cadence'}
+                  {req.cadence_error && <p className="mt-1 text-amber-700">{req.cadence_error}</p>}
+                </div>}
               </TableCell>
               <TableCell>{format(new Date(req.created_at), 'dd/MM/yyyy', { locale: fr })}</TableCell>
               <TableCell className="text-right space-x-2">
                 <Button variant="outline" size="sm" onClick={() => setExpandedId(expandedId === req.id ? null : req.id)}>
                   <Eye className="h-4 w-4 mr-2" /> Détails
                 </Button>
+                {seasonYear === 2027 && requestRoom(req) && !smartRoomIds.includes(requestRoom(req)!.id) && <Button variant="outline" size="sm" disabled={sending(req)} onClick={() => open2027Editor(requestRoom(req)!, req)}>Compléter / modifier</Button>}
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={() => setPendingApply(req)}
-                  disabled={applyingId === req.id}
+                  disabled={seasonYear === 2027 ? !canSend(req) : applyingId === req.id}
                 >
-                  <Wrench className="h-4 w-4 mr-2" /> Appliquer au logement
+                  <Wrench className="h-4 w-4 mr-2" /> {seasonYear === 2027 ? 'Valider et envoyer à Cadence' : 'Appliquer au logement'}
                 </Button>
                 {req.status !== "processing" && (
-                  <Button variant="outline" size="sm" onClick={() => updateStatus(req.id, "processing")}>
+                  <Button variant="outline" size="sm" disabled={sending(req)} onClick={() => updateStatus(req.id, "processing")}>
                     <CalendarDays className="h-4 w-4 mr-2" /> En cours
                   </Button>
                 )}
                 {req.status !== "done" && (
-                  <Button size="sm" onClick={() => updateStatus(req.id, "done")}>
+                  <Button size="sm" disabled={sending(req)} onClick={() => updateStatus(req.id, "done")}>
                     <CheckCircle className="h-4 w-4 mr-2" /> Terminer
                   </Button>
                 )}
                 {req.status !== "cancelled" && (
-                  <Button variant="destructive" size="sm" onClick={() => updateStatus(req.id, "cancelled")}>
+                  <Button variant="destructive" size="sm" disabled={sending(req)} onClick={() => updateStatus(req.id, "cancelled")}>
                     <Ban className="h-4 w-4 mr-2" /> Annuler
                   </Button>
                 )}
                 <SingleRequestExportMenu request={req} />
-                <Button
+                {seasonYear === 2026 && <Button
                   variant="default"
                   size="sm"
                   onClick={() => sendSmartPricingEmail(req)}
                 >
                   Smart Pricing
-                </Button>
+                </Button>}
               </TableCell>
             </TableRow>
 
@@ -528,6 +579,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
                       <CardDescription>Prix et restrictions soumis par l'utilisateur.</CardDescription>
                     </CardHeader>
                     <CardContent>
+                      {seasonYear === 2027 && requestRoom(req) && smartRoomIds.includes(requestRoom(req)!.id) && <div className="mb-4"><SmartPricingNotice /></div>}
+                      {seasonYear === 2027 && <p className="mb-3 text-sm text-muted-foreground">Complétez tous les prix et séjours minimums ouverts avant l’envoi. Les fermetures sont à gérer séparément dans Cadence ; les statuts « En cours » et « Terminer » n’envoient rien.</p>}
                       <div className="grid gap-2">
                         {Array.isArray(req.items) && req.items.length > 0 ? req.items.map((it, idx) => (
                           <div key={idx} className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm p-2 rounded bg-muted">
@@ -574,18 +627,23 @@ const AdminSeasonRequestsPage: React.FC = () => {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
             <CalendarDays className="h-6 w-6" />
-            Demandes Saison 2026
+            Demandes Saison {seasonYear}
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Select value={String(seasonYear)} onValueChange={value => { setSearchParams({ year: value }); setEditingRoom(null); setEditingRequest(null); setPendingApply(null); }}>
+              <SelectTrigger className="w-32" aria-label="Saison à afficher"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="2027">2027</SelectItem><SelectItem value="2026">2026</SelectItem></SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={() => void refreshFollowUp()}>Actualiser</Button>
             {!loading && (
               <span className="text-sm text-muted-foreground">
-                Total: {requests.length}
+                Total: {seasonRequests.length}
               </span>
             )}
-            <ExportRequestsMenu data={filtered} tableRef={tableRef} currentStatus={tab} />
+            <ExportRequestsMenu data={filtered} tableRef={tableRef} currentStatus={tab} seasonYear={seasonYear} />
           </div>
         </div>
 
@@ -593,18 +651,19 @@ const AdminSeasonRequestsPage: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Suivi des demandes</CardTitle>
-            <CardDescription>Filtrez par statut et mettez à jour l'état des demandes.</CardDescription>
+            <CardDescription>{seasonYear === 2027 ? 'Les demandes sont stockées ici en attente. Seul « Valider et envoyer à Cadence », suivi de votre confirmation, transmet les tarifs. Les autres boutons modifient uniquement le suivi.' : "Filtrez par statut et mettez à jour l'état des demandes."}</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <Skeleton className="h-48 w-full" />
             ) : (
               <Tabs value={tab} onValueChange={(v) => setTab(v as SeasonPricingStatus)}>
+                {!filtered.length && <p className="mb-4 text-sm text-muted-foreground">Aucune demande Saison {seasonYear} dans cet onglet.</p>}
                 <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="pending">En attente ({requests.filter(r => r.status === 'pending').length})</TabsTrigger>
-                  <TabsTrigger value="processing">En cours ({requests.filter(r => r.status === 'processing').length})</TabsTrigger>
-                  <TabsTrigger value="done">Terminées ({requests.filter(r => r.status === 'done').length})</TabsTrigger>
-                  <TabsTrigger value="cancelled">Annulées ({requests.filter(r => r.status === 'cancelled').length})</TabsTrigger>
+                  <TabsTrigger value="pending">En attente ({seasonRequests.filter(r => r.status === 'pending').length})</TabsTrigger>
+                  <TabsTrigger value="processing">En cours ({seasonRequests.filter(r => r.status === 'processing').length})</TabsTrigger>
+                  <TabsTrigger value="done">Terminées ({seasonRequests.filter(r => r.status === 'done').length})</TabsTrigger>
+                  <TabsTrigger value="cancelled">Annulées ({seasonRequests.filter(r => r.status === 'cancelled').length})</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pending" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
                 <TabsContent value="processing" className="mt-4"><div ref={tableRef}>{renderTable()}</div></TabsContent>
@@ -620,8 +679,8 @@ const AdminSeasonRequestsPage: React.FC = () => {
           <CardHeader>
             <div className="flex items-start md:items-center justify-between gap-4 flex-wrap">
               <div>
-                <CardTitle>Suivi des logements Saison 2026</CardTitle>
-                <CardDescription>Statut par logement (vert = terminé, rouge = non terminé) et actions.</CardDescription>
+                <CardTitle>Suivi des logements Saison {seasonYear}</CardTitle>
+                <CardDescription>{seasonYear === 2027 ? 'Smart Pricing : aucune demande attendue. Les logements sans mapping Cadence doivent être associés avant tout envoi.' : 'Statut par logement (vert = terminé, rouge = non terminé) et actions.'}</CardDescription>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
@@ -635,7 +694,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
             {(roomsLoading || loading) ? (
               <Skeleton className="h-48 w-full" />
             ) : (
-              <div ref={tableRef}>
+              <div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -643,7 +702,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                       <TableHead>Logement</TableHead>
                       <TableHead>Identifiant</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Statut 2026</TableHead>
+                      <TableHead>Statut {seasonYear}</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -653,6 +712,7 @@ const AdminSeasonRequestsPage: React.FC = () => {
                       const ownerName = profile ? (`${profile.first_name ?? ""} ${profile.last_name ?? ""}`).trim() || "—" : "—";
                       const email = profile?.email ?? "—";
                       const isDone = status === "done";
+                      const smartPricing = seasonYear === 2027 && smartRoomIds.includes(room.id);
                       return (
                         <TableRow key={room.id}>
                           <TableCell className="font-medium">{ownerName}</TableCell>
@@ -660,37 +720,38 @@ const AdminSeasonRequestsPage: React.FC = () => {
                           <TableCell>{room.room_id || "—"}</TableCell>
                           <TableCell>{email}</TableCell>
                           <TableCell>
-                            {isDone ? (
+                            {smartPricing ? <span className="text-sm text-indigo-700">Smart Pricing — aucune action attendue</span> : isDone ? (
                               <span className="inline-flex items-center gap-2 text-green-600">
                                 <CheckCircle className="h-4 w-4" /> Terminé
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-2 text-red-600">
-                                <XCircle className="h-4 w-4" /> Non terminé
+                                <XCircle className="h-4 w-4" /> {status === 'none' ? 'Sans demande' : status === 'pending' ? 'En attente' : status === 'processing' ? 'En cours' : 'Annulé'}
                               </span>
                             )}
+                            {seasonYear === 2027 && !linkedRoomIds.includes(room.id) && <p className="mt-1 text-xs text-amber-700">Mapping Cadence manquant</p>}
                           </TableCell>
                           <TableCell className="text-right space-x-2">
-                            {status === 'none' && (
+                            {status === 'none' && !smartPricing && (
                               <>
                                 <Button size="sm" onClick={() => sendSeasonReminderEmail(room)}>
                                   Relancer
                                 </Button>
                               </>
                             )}
-                            {status !== 'done' && (
+                            {status !== 'done' && !smartPricing && (
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                onClick={() => setEditingRoom(room)}
+                                onClick={() => seasonYear === 2027 ? open2027Editor(room) : setEditingRoom(room)}
                               >
                                 Définir les prix
                               </Button>
                             )}
-                            <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
+                            {seasonYear === 2026 && <Button variant="outline" size="sm" onClick={() => sendSmartPricingEmailByUserId(room.user_id)}>
                               Smart Pricing
-                            </Button>
-                            {!isDone && (
+                            </Button>}
+                            {seasonYear === 2026 && !isDone && (
                               <Button variant="ghost" size="sm" onClick={() => handleForceDoneClick(room)}>
                                 Forcer "Terminé"
                               </Button>
@@ -710,31 +771,42 @@ const AdminSeasonRequestsPage: React.FC = () => {
         <AlertDialog open={!!pendingApply} onOpenChange={(open) => !open && setPendingApply(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Appliquer sur le logement ?</AlertDialogTitle>
+              <AlertDialogTitle>{pendingApply?.season_year === 2027 ? 'Valider et envoyer les tarifs 2027 à Cadence ?' : 'Appliquer sur le logement ?'}</AlertDialogTitle>
               <AlertDialogDescription>
-                Cette action enverra les prix et restrictions de la demande au Channel Manager
-                et enregistrera les modifications comme overrides. Confirmez pour continuer.
+                {pendingApply?.season_year === 2027 ? `Vous validez les prix et séjours minimums de ${pendingApply.room_name || pendingApply.room_id}. Seule cette confirmation les enverra à Cadence. Les tarifs propriétaire hors des périodes modifiées seront conservés. Les fermetures (${pendingApply.items.filter(item => item.closed).length} période(s)) ne seront pas envoyées et devront être traitées séparément. La demande restera « En cours » jusqu’à votre clôture manuelle.` : 'Cette action enverra les prix et restrictions de la demande au Channel Manager et enregistrera les modifications comme overrides. Confirmez pour continuer.'}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
+              <Button variant="outline" onClick={() => setPendingApply(null)} disabled={!!applyingId}>Annuler</Button>
               <AlertDialogAction
+                disabled={!!applyingId || (pendingApply?.season_year === 2027 && !canSend(pendingApply))}
                 onClick={() => pendingApply && applyRequestToRoom(pendingApply)}
               >
-                Confirmer
+                {pendingApply?.season_year === 2027 ? 'Confirmer la validation et l’envoi' : 'Confirmer'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
         {/* RENDU: afficher l'éditeur seulement si un logement est sélectionné */}
-        {editingRoom && (
+        {editingRoom && (seasonYear === 2027 ? <Season2027RequestEditor
+          key={editingRequest?.id || editingRoom.id}
+          room={editingRoom}
+          request={editingRequest || undefined}
+          smartPricing={smartRoomIds.includes(editingRoom.id)}
+          onClose={() => { setEditingRoom(null); setEditingRequest(null); }}
+          onSaved={saved => setRequests(prev => {
+            const enriched = { ...saved, profiles: profilesById[saved.user_id] || null };
+            return prev.some(request => request.id === saved.id) ? prev.map(request => request.id === saved.id ? enriched : request) : [enriched, ...prev];
+          })}
+        /> : (
           <AdminSeasonPriceEditor
             open={true}
             onOpenChange={(open) => setEditingRoom(open ? editingRoom : null)}
             room={editingRoom}
             onCreated={handleAdminCreatedRequest}
           />
-        )}
+        ))}
       </div>
     </AdminLayout>
   );

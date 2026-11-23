@@ -24,6 +24,7 @@ import { GuestAvatar } from "./V4Thumb";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSession } from "@/components/SessionContextProvider";
 import WinterPwaOverview from "@/components/WinterPwaOverview";
+import Season2027Banner from "@/components/Season2027Banner";
 import {
   useV4Reservations,
   useV4Reviews,
@@ -212,6 +213,7 @@ const HomeV4: React.FC = () => {
           </Link>
         </div>
 
+        <Season2027Banner />
         <WinterPwaOverview rooms={rooms} />
 
         {/* Statut du jour (uniquement si activité aujourd'hui) */}

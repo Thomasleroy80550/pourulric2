@@ -106,7 +106,7 @@ const adminNavigationCategories = [
       { name: 'Stratégies', href: '/admin/strategies', icon: Target, description: 'Définir les stratégies de prix.' },
       { name: 'Demandes Modules', href: '/admin/module-requests', icon: Puzzle, description: 'Gérer les demandes d\'activation de modules.' },
       { name: 'Demandes PowerSense', href: '/admin/module-requests?module=electricity', icon: Zap, description: 'Candidatures PowerSense.' },
-      { name: 'Demandes Saison 2026', href: '/admin/season-requests', icon: CalendarDays, description: 'Voir et traiter les demandes de prix saison.' },
+      { name: 'Demandes Saison 2027', href: '/admin/season-requests', icon: CalendarDays, description: 'Examiner les tarifs 2027 et confirmer leur envoi à Cadence. Historique 2026 disponible.' },
       { name: 'Marketplace', href: '/admin/marketplace', icon: Store, description: 'Gérer les prestataires de la marketplace.' },
       { name: 'Demandes Hivernage', href: '/admin/hivernage-requests', icon: Snowflake, description: 'Voir et exporter les demandes d\"hivernage.' },
       { name: 'Mini-sites', href: '/admin/mini-sites', icon: LayoutTemplate, description: 'Suivre les mini-sites créés et leur publication.' },

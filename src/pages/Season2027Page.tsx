@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { SEASON_2027_PERIODS, SEASON_2027_YEAR, type SeasonPeriod } from "@/lib/season-2027";
+import { SEASON_2027_PERIODS, SEASON_2027_YEAR, SEASON_2027_OTA_MARKUPS, formatSeasonOtaPrice, type SeasonPeriod } from "@/lib/season-2027";
 import {
   createSeasonPricingRequest,
   getExistingSeasonPricingRoomIds,
@@ -27,12 +27,6 @@ import { getUserRooms, type UserRoom } from "@/lib/user-room-api";
 
 type PeriodInput = { price?: string; minStay?: string };
 type RoomState = "smart-pricing" | "requested" | "open";
-
-const PLATFORM_MARKUPS = [
-  { name: "Airbnb", multiplier: 1.17 },
-  { name: "Booking", multiplier: 1.19 },
-  { name: "Abritel", multiplier: 1.17 },
-];
 
 function dayOfMonth(date: Date) {
   return date.getDate() === 1 ? "1er" : String(date.getDate());
@@ -240,7 +234,9 @@ const Season2027Page = () => {
                         <TableHead>Dates</TableHead>
                         <TableHead>Séjour minimum</TableHead>
                         <TableHead>Prix par nuit (€)</TableHead>
-                        <TableHead>Prix plateformes</TableHead>
+                        {SEASON_2027_OTA_MARKUPS.map(ota => (
+                          <TableHead key={ota.label} className="min-w-36 text-right">{ota.label}<span className="block text-xs font-normal">+{ota.percent} % · par nuit</span></TableHead>
+                        ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -251,12 +247,13 @@ const Season2027Page = () => {
                             <TableRow key={period.start} className="bg-muted/40 hover:bg-muted/40">
                               <TableCell className="font-medium">{period.label}</TableCell>
                               <TableCell className="whitespace-nowrap">{dates}</TableCell>
-                              <TableCell colSpan={3} className="text-muted-foreground">
+                              <TableCell colSpan={2} className="text-muted-foreground">
                                 <span className="inline-flex items-center gap-2">
                                   <Lock className="h-4 w-4" />
                                   Fermé à la location
                                 </span>
                               </TableCell>
+                              {SEASON_2027_OTA_MARKUPS.map(ota => <TableCell key={ota.label} className="text-right text-muted-foreground">—</TableCell>)}
                             </TableRow>
                           );
                         }
@@ -298,11 +295,11 @@ const Season2027Page = () => {
                                 className="w-28"
                               />
                             </TableCell>
-                            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                              {price > 0
-                                ? PLATFORM_MARKUPS.map(platform => `${platform.name} ${Math.round(price * platform.multiplier)} €`).join(" · ")
-                                : "—"}
-                            </TableCell>
+                            {SEASON_2027_OTA_MARKUPS.map(ota => (
+                              <TableCell key={ota.label} className="whitespace-nowrap text-right font-medium tabular-nums">
+                                {formatSeasonOtaPrice(price, ota.percent)}
+                              </TableCell>
+                            ))}
                           </TableRow>
                         );
                       })}
@@ -310,7 +307,7 @@ const Season2027Page = () => {
                   </Table>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs text-muted-foreground">
-                      Prix plateformes : estimation après majoration ({PLATFORM_MARKUPS.map(platform => `${platform.name} +${Math.round((platform.multiplier - 1) * 100)} %`).join(", ")}).
+                      Prix OTA estimés par nuit après majoration : Airbnb / VRBO +17 %, Booking.com +19 %. La demande conserve votre prix saisi, sans double majoration.
                     </p>
                     <Button onClick={() => void handleSubmit()} disabled={submitting}>
                       {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

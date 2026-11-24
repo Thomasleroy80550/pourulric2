@@ -9,6 +9,19 @@ export interface SeasonPeriod {
 
 export const SEASON_2027_YEAR = 2027;
 
+export const SEASON_2027_OTA_MARKUPS = [
+  { label: "Airbnb / VRBO", percent: 17 },
+  { label: "Booking.com", percent: 19 },
+] as const;
+
+const otaCurrency = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" });
+
+export function formatSeasonOtaPrice(price: number | null | undefined, percent: number): string {
+  return typeof price === "number" && Number.isFinite(price) && price > 0
+    ? otaCurrency.format(price * (100 + percent) / 100)
+    : "—";
+}
+
 export const SEASON_2027_PERIODS: SeasonPeriod[] = [
   { start: "2027-01-01", end: "2027-01-03", label: "Nouvel An", minStay: 3 },
   { start: "2027-01-04", end: "2027-02-04", label: "Fermeture", minStay: null },

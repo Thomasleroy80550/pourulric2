@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import SmartPricingNotice from "@/components/SmartPricingNotice";
-import { SEASON_2027_PERIODS } from "@/lib/season-2027";
+import { SEASON_2027_PERIODS, SEASON_2027_OTA_MARKUPS, formatSeasonOtaPrice } from "@/lib/season-2027";
 import { safeFormat } from "@/lib/date-utils";
 import type { AdminUserRoom } from "@/lib/admin-api";
 import type { SeasonPricingItem, SeasonPricingRequest } from "@/lib/season-pricing-api";
@@ -56,7 +56,10 @@ export default function Season2027RequestEditor({ room, request, smartPricing, o
         </DialogHeader>
         {smartPricing ? <SmartPricingNotice /> : <>
           <Table>
-            <TableHeader><TableRow><TableHead>Période</TableHead><TableHead>Du / Au (inclus)</TableHead><TableHead>Prix par nuit (€)</TableHead><TableHead>Min. nuits</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow>
+              <TableHead>Période</TableHead><TableHead>Du / Au (inclus)</TableHead><TableHead>Prix par nuit (€)</TableHead><TableHead>Min. nuits</TableHead>
+              {SEASON_2027_OTA_MARKUPS.map(ota => <TableHead key={ota.label} className="min-w-36 text-right">{ota.label}<span className="block text-xs font-normal">+{ota.percent} % · par nuit</span></TableHead>)}
+            </TableRow></TableHeader>
             <TableBody>{items.map((item, index) => <TableRow key={`${item.start_date}-${index}`}>
               <TableCell>{item.period_type}</TableCell>
               <TableCell className="whitespace-nowrap">{safeFormat(item.start_date, "dd/MM/yyyy")} – {safeFormat(item.end_date, "dd/MM/yyyy")}</TableCell>
@@ -64,8 +67,10 @@ export default function Season2027RequestEditor({ room, request, smartPricing, o
                 <TableCell><Input aria-label={`Prix ${item.period_type} ${item.start_date}`} type="number" min={1} max={100000} value={item.price ?? ""} onChange={event => update(index, "price", event.target.value)} disabled={saving} /></TableCell>
                 <TableCell><Input aria-label={`Séjour minimum ${item.period_type} ${item.start_date}`} type="number" min={1} max={365} step={1} value={item.min_stay ?? ""} onChange={event => update(index, "min_stay", event.target.value)} disabled={saving} /></TableCell>
               </>}
+              {SEASON_2027_OTA_MARKUPS.map(ota => <TableCell key={ota.label} className="whitespace-nowrap text-right font-medium tabular-nums">{formatSeasonOtaPrice(item.closed ? null : item.price, ota.percent)}</TableCell>)}
             </TableRow>)}</TableBody>
           </Table>
+          <p className="text-xs text-muted-foreground">Prix OTA estimés après majoration. Seul le prix de base saisi est enregistré et transmis à Cadence sur votre validation.</p>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Button variant="outline" onClick={onClose} disabled={saving}>Annuler</Button>
             <Button onClick={() => void save()} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Enregistrer sans envoyer</Button>

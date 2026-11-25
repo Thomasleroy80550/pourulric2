@@ -61,7 +61,8 @@ serve(async (req) => {
     const { data, error } = await resend.emails.send({
       from: 'Hello Keys <noreply@notifications.hellokeys.fr>',
       to: [FRESHDESK_SUPPORT_EMAIL],
-      reply_to: userEmail,
+      // Le SDK Resend attend "replyTo" : "reply_to" est ignoré sans erreur.
+      replyTo: userEmail,
       subject: emailSubject,
       html: `<p>${body.replace(/\n/g, '<br>')}</p>`,
       text: body
@@ -74,6 +75,8 @@ serve(async (req) => {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+
+    console.log('[freshdesk-reply-by-email] Reply sent', { userId: user.id, ticketId, emailId: data?.id });
 
     return new Response(JSON.stringify({ message: 'E-mail de réponse envoyé avec succès', data }), {
       status: 200,

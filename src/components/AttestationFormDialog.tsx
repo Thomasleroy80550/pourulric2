@@ -165,7 +165,8 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
             <Label htmlFor="acknowledgesCguvLimits">Je comprends que l'acceptation des CGUV et l'absence de séjour ne prouvent pas, à elles seules, l'impossibilité d'un usage personnel et ne garantissent pas l'exonération.</Label>
           </div>
           <div className="md:col-span-2 text-xs text-muted-foreground bg-slate-50 dark:bg-slate-800/40 border rounded-md p-3 space-y-2">
-            <p>Complétez tous les champs et cochez les deux confirmations pour télécharger le document, puis signez-le.</p>
+            <p className="font-medium">Conseils avant envoi — non inclus dans le PDF</p>
+            <p>Complétez tous les champs et cochez les deux confirmations pour télécharger le document, puis signez-le. Le PDF contient uniquement les informations d'identification, les données d'acceptation des CGUV et votre déclaration destinée à l'administration fiscale.</p>
             <p>Les CGUV actuellement consultables prévoient les séjours du propriétaire avec notification préalable (article 4.4) et les périodes qui lui sont expressément réservées (article 7.1.3). Elles n'excluent donc pas globalement l'usage personnel. Cette déclaration ne modifie pas les CGUV.</p>
             <p>Joignez la version des CGUV acceptée et sa preuve d'acceptation, ainsi que les justificatifs de location (annonces, calendrier, réservations ou relevés de gestion). Demandez au service des impôts quels éléments supplémentaires sont nécessaires pour justifier l'absence de disposition personnelle. Effectuez la déclaration d'occupation demandée, notamment via « Gérer mes biens immobiliers ».</p>
             <p>Seule l'administration fiscale apprécie votre situation. Si vous conservez la possibilité d'utiliser le logement, l'absence de séjour ne suffit pas à établir les conditions d'une exonération.</p>

@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import AttestationContent from '@/components/AttestationContent';
 import { UserProfile } from '@/lib/profile-api';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { createAttestationPdf } from '@/lib/attestation-pdf';
 import { toast } from 'sonner';
 
 interface AttestationFormDialogProps {
@@ -63,33 +62,7 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     }
 
     try {
-      await document.fonts.ready;
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        width: el.scrollWidth,
-        height: el.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.9);
-      const pdf = new jsPDF({
-        orientation: 'p',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const scale = Math.min(
-        (pdfWidth - margin * 2) / canvas.width,
-        (pdfHeight - margin * 2) / canvas.height,
-      );
-      const imgWidth = canvas.width * scale;
-      const imgHeight = canvas.height * scale;
-      pdf.addImage(imgData, 'JPEG', (pdfWidth - imgWidth) / 2, margin, imgWidth, imgHeight);
-
+      const pdf = await createAttestationPdf(el);
       const fileName = `attestation-hellokeys-${(lastName || profile.last_name || 'client').toLowerCase()}.pdf`;
       pdf.save(fileName);
 

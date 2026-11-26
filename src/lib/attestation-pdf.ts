@@ -34,12 +34,12 @@ export async function createAttestationPdf(element: HTMLElement): Promise<jsPDF>
         text: node.tagName === 'LI' ? `- ${text}` : text,
         bold: heading,
         size: 1,
-        before: heading ? 3 : 0,
-        after: heading ? 1.5 : 1,
+        before: heading ? 5 : 0,
+        after: 2,
       });
     });
     if (section.querySelector('div')) {
-      blocks.push({ text: '', size: 1, before: 0, after: 12 });
+      blocks.push({ text: '', size: 1, before: 0, after: 18 });
     }
   });
   const footer = element.querySelector('footer');
@@ -57,11 +57,11 @@ export async function createAttestationPdf(element: HTMLElement): Promise<jsPDF>
     pdf.setFont('helvetica', block.bold ? 'bold' : 'normal');
     pdf.setFontSize(fontSize * block.size);
     const lines: string[] = block.text ? pdf.splitTextToSize(block.text, width) : [];
-    const lineHeight = fontSize * block.size * 0.352778 * 1.25;
+    const lineHeight = fontSize * block.size * 0.352778 * 1.35;
     return { ...block, lines, lineHeight, height: block.before + lines.length * lineHeight + block.after };
   });
 
-  let fontSize = 10;
+  let fontSize = 13;
   let rows = layout(fontSize);
   while (logoHeight + 4 + rows.reduce((sum, row) => sum + row.height, 0) > availableHeight && fontSize > 4) {
     fontSize -= 0.25;

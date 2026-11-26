@@ -29,10 +29,14 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
     const ownerFullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
 
     return (
-      <div ref={ref} className="p-10 bg-white text-black font-serif text-sm leading-relaxed" style={{ width: '21cm', minHeight: '29.7cm' }}>
-        <header className="text-center mb-6">
-          <img src="/logo.png" alt="Hello Keys Logo" className="w-32 mx-auto mb-3" />
-          <h1 className="text-xl font-bold uppercase">Attestation d'usage locatif</h1>
+      <div ref={ref} className="p-8 bg-white text-black font-serif text-[12px] leading-[1.4]" style={{ width: '21cm', minHeight: '29.7cm' }}>
+        <header className="text-center mb-4">
+          <img src="/logo.png" alt="Hello Keys Logo" className="w-24 mx-auto mb-2" />
+          <h1 className="flex justify-center flex-wrap gap-x-2 text-lg font-bold uppercase leading-normal">
+            <span>Attestation</span>
+            <span>d'usage</span>
+            <span>locatif</span>
+          </h1>
           <p className="mt-2">Déclaration sur l'honneur du propriétaire — Année {displayYear}</p>
           <p className="text-xs mt-2">Gestionnaire indiqué : HELLO KEYS – SARL – 1 Rue Carnot – 80550 Le Crotoy</p>
         </header>

@@ -63,46 +63,38 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
     }
 
     try {
-    const canvas = await html2canvas(el as HTMLElement, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      width: (el as HTMLElement).scrollWidth,
-      height: (el as HTMLElement).scrollHeight,
-    });
+      await document.fonts.ready;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: el.scrollWidth,
+        height: el.scrollHeight,
+      });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.9);
-    const pdf = new jsPDF({
-      orientation: 'p',
-      unit: 'mm',
-      format: 'a4',
-    });
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      });
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const margin = 10; // marges pour une meilleure lisibilité
-    const targetWidth = pdfWidth - margin * 2;
-    const imgHeight = (canvas.height * targetWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const scale = Math.min(
+        (pdfWidth - margin * 2) / canvas.width,
+        (pdfHeight - margin * 2) / canvas.height,
+      );
+      const imgWidth = canvas.width * scale;
+      const imgHeight = canvas.height * scale;
+      pdf.addImage(imgData, 'JPEG', (pdfWidth - imgWidth) / 2, margin, imgWidth, imgHeight);
 
-    // Première page
-    pdf.addImage(imgData, 'JPEG', margin, margin + position, targetWidth, imgHeight);
-    heightLeft -= (pdfHeight - margin * 2);
+      const fileName = `attestation-hellokeys-${(lastName || profile.last_name || 'client').toLowerCase()}.pdf`;
+      pdf.save(fileName);
 
-    // Pages suivantes
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', margin, margin + position, targetWidth, imgHeight);
-      heightLeft -= (pdfHeight - margin * 2);
-    }
-
-    const fileName = `attestation-hellokeys-${(lastName || profile.last_name || 'client').toLowerCase()}.pdf`;
-    pdf.save(fileName);
-
-    onOpenChange(false);
-    toast.success('Attestation téléchargée : signez-la et joignez vos justificatifs.');
+      onOpenChange(false);
+      toast.success('Attestation téléchargée : signez-la et joignez vos justificatifs.');
     } catch {
       toast.error("Impossible de générer l'attestation. Veuillez réessayer.");
     } finally {

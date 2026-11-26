@@ -48,7 +48,6 @@ const AttestationContent = forwardRef<HTMLDivElement, AttestationContentProps>(
           <p><strong>Email :</strong> {profile.email || 'Non renseigné'}</p>
           <p><strong>Adresse du bien :</strong> {propertyAddress}, {propertyZip} {propertyCity}</p>
           <p><strong>Date d'acceptation des CGUV enregistrée au profil :</strong> {cguvAcceptedDate}</p>
-          <p><strong>Version des CGUV enregistrée au profil :</strong> {profile.cguv_version || 'Non renseignée'}</p>
         </section>
 
         <section className="mb-5 text-justify">

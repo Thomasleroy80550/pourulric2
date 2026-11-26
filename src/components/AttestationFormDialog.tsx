@@ -144,7 +144,6 @@ const AttestationFormDialog: React.FC<AttestationFormDialogProps> = ({ open, onO
           <div className="md:col-span-2 rounded-md border p-3 text-sm space-y-1">
             <p className="font-medium">CGUV acceptées dans votre espace client</p>
             <p>Date enregistrée : {profile?.cguv_accepted_at && !Number.isNaN(Date.parse(profile.cguv_accepted_at)) ? new Date(profile.cguv_accepted_at).toLocaleDateString('fr-FR') : 'Non renseignée'}</p>
-            <p>Version enregistrée : {profile?.cguv_version || 'Non renseignée'}</p>
             {!profile?.cguv_accepted_at && <p role="alert" className="text-destructive">Aucune acceptation des CGUV n'est enregistrée. Acceptez-les dans votre espace client ou contactez Hello Keys avant de générer l'attestation.</p>}
           </div>
           <div className="flex items-start gap-2 md:col-span-2">
